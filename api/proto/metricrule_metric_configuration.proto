@@ -1,0 +1,53 @@
+syntax = "proto3"
+package metricrule.sidecar.tfserving.api;
+
+import "google/protobuf/fieldmask.proto"
+
+message SidecarConfig {
+    // Configuration for the data from the input tensor to record as metrics.
+    // Each entry represents a separate metric.
+    // If empty, no input data is recorded as metrics.
+    repeated MetricConfig input_metrics = 1;
+    
+    // Configuration for the data from the output to record as metrics.
+    // Each entry represents a separate metric.
+    // If empty, no output data is recorded as metrics.
+    repeated MetricConfig output_metrics = 2;
+}
+
+// Configures a metric from either the input or output of the serving API.
+message MetricConfig {
+    // Labels to use for the metric. 
+    repeated LabelConfig labels = 1;
+    
+    oneof {
+        SimpleCounterMetric simple_counter = 100;
+
+        ValueMetric value = 101;
+    }
+}
+
+// A simple counter that increments by one for each matching instance.
+message SimpleCounterMetric {}
+
+// A metric that tracks dynamic values (e.g to build a histogram)
+message ValueMetric {
+    ValueConfig value = 1;
+}
+
+// A key and value to associate with each metric.
+// See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#labels
+message LabelConfig {
+    ValueConfig label_key = 1;
+
+    ValueConfig label_value = 2;
+}
+
+message ValueConfig {
+    // A single configured value. 
+    string static_value = 1;
+
+    // The path from the root (of request or response) to retrieve
+    // the value.
+    google.protobuf.Fieldmask field_path = 1;
+}
