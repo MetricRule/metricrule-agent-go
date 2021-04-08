@@ -1,7 +1,10 @@
-syntax = "proto3"
+syntax = "proto3";
+
 package metricrule.sidecar.tfserving.api;
 
-import "google/protobuf/fieldmask.proto"
+import "google/protobuf/field_mask.proto";
+
+option go_package = "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb";
 
 message SidecarConfig {
     // Configuration for the data from the input tensor to record as metrics.
@@ -17,10 +20,7 @@ message SidecarConfig {
 
 // Configures a metric from either the input or output of the serving API.
 message MetricConfig {
-    // Labels to use for the metric. 
-    repeated LabelConfig labels = 1;
-    
-    oneof {
+    oneof metric {
         SimpleCounterMetric simple_counter = 100;
 
         ValueMetric value = 101;
@@ -49,5 +49,5 @@ message ValueConfig {
 
     // The path from the root (of request or response) to retrieve
     // the value.
-    google.protobuf.Fieldmask field_path = 1;
+    google.protobuf.FieldMask field_path = 2;
 }
