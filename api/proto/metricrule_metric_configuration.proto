@@ -20,8 +20,14 @@ message SidecarConfig {
 
 // Configures a metric from either the input or output of the serving API.
 message MetricConfig {
+    // Name of the metric. Required.
+    // This should be a snake_case string in all lowers.
+    // The unit of the metric should be clearly specified.
+    // e.g "output_prediction_time_to_respond_seconds"
+    string name = 1;
+
     // Labels associated with this metric. Optional.
-    repeated LabelConfig labels = 1;
+    repeated LabelConfig labels = 2;
 
     // Required. The type of metric to record.
     oneof metric {

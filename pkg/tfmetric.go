@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -13,24 +14,69 @@ import (
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
 )
 
-type MetricInstance struct {
-	// The kind of metric to use.
-	metricKind metric.InstrumentKind
-	// The value of the metric.
-	metricValue interface{}
-	// Sets of key-value pairs to use as labels.
-	labels []attribute.KeyValue
+// MetricInstrumentSpec specifies an instrument to record a metric.
+// Multiple instances of a metric, over time, can be associated with
+// this specification.
+// Specifies the kind of instrument (counter, value recorder), the
+// kind of value (int64, float64), and a name of the metric.
+type MetricInstrumentSpec struct {
+	// The kind of instrument to use.
+	InstrumentKind metric.InstrumentKind
+	// The type of value to be measured in the metric.
+	MetricValueKind reflect.Kind
+	// Identifying name of this metric
+	Name string
 }
 
+// A MetricInstance is a single instance of a metric to be recorded.
+// Consists of a value (of the type specified by MetricValueKind)
+// and a list of key-value labels to be associated with the recording
+// event.
+type MetricInstance struct {
+	// The value of the metric.
+	MetricValue interface{}
+	// Sets of key-value pairs to use as labels.
+	Labels []attribute.KeyValue
+}
+
+// MetricContext is the context to record the metric for.
+// This is either InputContext for recording input features or
+// OutputContext for recording output values.
 type MetricContext int
 
 const (
+	// UnknownContext - Do not use.
 	UnknownContext MetricContext = iota
+	// InputContext creates metrics for input features and data.
 	InputContext
+	// OutputContext creates metrics for model outputs.
 	OutputContext
 )
 
-func CreateMetrics(config *configpb.SidecarConfig, payload string, context MetricContext) []MetricInstance {
+// GetInstrumentSpecs returns the specifications of metric instruments to create
+// for recording metrics, per each input context, for the provided config.
+func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]MetricInstrumentSpec {
+	specs := make(map[MetricContext][]MetricInstrumentSpec)
+
+	if len(config.InputMetrics) > 0 {
+		specs[InputContext] = []MetricInstrumentSpec{}
+		for _, config := range config.InputMetrics {
+			specs[InputContext] = append(specs[InputContext], getInstrumentSpec(config))
+		}
+	}
+
+	if len(config.OutputMetrics) > 0 {
+		specs[OutputContext] = []MetricInstrumentSpec{}
+		for _, config := range config.OutputMetrics {
+			specs[OutputContext] = append(specs[OutputContext], getInstrumentSpec(config))
+		}
+	}
+
+	return specs
+}
+
+// GetMetricInstances returns a map of metric specifications to the instances to record.
+func GetMetricInstances(config *configpb.SidecarConfig, payload string, context MetricContext) map[MetricInstrumentSpec]MetricInstance {
 	metricConfigs := []*configpb.MetricConfig{}
 	if context == InputContext {
 		metricConfigs = config.InputMetrics
@@ -45,18 +91,25 @@ func CreateMetrics(config *configpb.SidecarConfig, payload string, context Metri
 		log.Fatal("Error when umarshaling payload json", err)
 	}
 
-	var output []MetricInstance
+	output := make(map[MetricInstrumentSpec]MetricInstance)
 	for _, config := range metricConfigs {
-		kind := getMetricKind(config)
 		value := getMetricValue(config, jsonPayload)
 		labels := getMetricLabels(config, jsonPayload)
-		output = append(output, MetricInstance{kind, value, labels})
+		spec := getInstrumentSpec(config)
+		output[spec] = MetricInstance{value, labels}
 	}
 
 	return output
 }
 
-func getMetricKind(config *configpb.MetricConfig) metric.InstrumentKind {
+func getInstrumentSpec(config *configpb.MetricConfig) MetricInstrumentSpec {
+	instrumentKind := getInstrumentKind(config)
+	metricKind := getMetricKind(config)
+	spec := MetricInstrumentSpec{instrumentKind, metricKind, config.Name}
+	return spec
+}
+
+func getInstrumentKind(config *configpb.MetricConfig) metric.InstrumentKind {
 	if config.GetSimpleCounter() != nil {
 		return metric.CounterInstrumentKind
 	}
@@ -68,14 +121,14 @@ func getMetricKind(config *configpb.MetricConfig) metric.InstrumentKind {
 
 func getMetricValue(config *configpb.MetricConfig, jsonPayload interface{}) interface{} {
 	if config.GetSimpleCounter() != nil {
-		return 1
+		return int64(1)
 	}
 	if config.GetValue() != nil {
 		value := config.GetValue().GetValue()
 		return extractValue(value, jsonPayload)
 	}
 	// Default to a counter
-	return 1
+	return int64(1)
 }
 
 func getMetricLabels(config *configpb.MetricConfig, jsonPayload interface{}) []attribute.KeyValue {
@@ -101,6 +154,43 @@ func getMetricLabels(config *configpb.MetricConfig, jsonPayload interface{}) []a
 		}
 	}
 	return labels
+}
+
+func getMetricKind(config *configpb.MetricConfig) reflect.Kind {
+	if config.GetSimpleCounter() != nil {
+		return reflect.Int64
+	}
+	if config.GetValue() != nil {
+		return getValueMetricKind(config.GetValue().GetValue())
+	}
+	return reflect.Invalid
+}
+
+func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
+	if config.GetParsedValue() != nil {
+		switch config.GetParsedValue().ParsedType {
+		case configpb.ParsedValue_STRING:
+			return reflect.String
+		case configpb.ParsedValue_INTEGER:
+			return reflect.Int64
+		case configpb.ParsedValue_FLOAT:
+			return reflect.Float64
+		}
+	}
+
+	if config.GetStaticValue() != nil {
+		if _, ok := config.GetStaticValue().(*configpb.ValueConfig_StringValue); ok {
+			return reflect.String
+		}
+		if _, ok := config.GetStaticValue().(*configpb.ValueConfig_IntegerValue); ok {
+			return reflect.Int64
+		}
+		if _, ok := config.GetStaticValue().(*configpb.ValueConfig_FloatValue); ok {
+			return reflect.Float64
+		}
+	}
+
+	return reflect.Invalid
 }
 
 func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interface{} {
