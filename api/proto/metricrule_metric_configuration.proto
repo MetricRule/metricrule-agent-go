@@ -9,17 +9,21 @@ option go_package = "github.com/metricrule-sidecar-tfserving/api/proto/metriccon
 message SidecarConfig {
     // Configuration for the data from the input tensor to record as metrics.
     // Each entry represents a separate metric.
-    // If empty, no input data is recorded as metrics.
+    // Optional. If empty, no input data is recorded as metrics.
     repeated MetricConfig input_metrics = 1;
     
     // Configuration for the data from the output to record as metrics.
     // Each entry represents a separate metric.
-    // If empty, no output data is recorded as metrics.
+    // Optional. If empty, no output data is recorded as metrics.
     repeated MetricConfig output_metrics = 2;
 }
 
 // Configures a metric from either the input or output of the serving API.
 message MetricConfig {
+    // Labels associated with this metric. Optional.
+    repeated LabelConfig labels = 1;
+
+    // Required. The type of metric to record.
     oneof metric {
         SimpleCounterMetric simple_counter = 100;
 
@@ -43,11 +47,34 @@ message LabelConfig {
     ValueConfig label_value = 2;
 }
 
+// Configuration for the value to fill in the metric.
+// In order of reduced precedence (e.g if both parsed_value and static_value are present,
+// parsed_value will take precedence)
 message ValueConfig {
-    // A single configured value. 
-    string static_value = 1;
+    // Optional. A value to be parsed from the application payload.
+    ParsedValue parsed_value = 1;    
 
+    // Optional. A single configured value.
+    oneof static_value {
+        string string_value = 100;
+
+        int64 integer_value = 101;
+
+        float float_value = 102;
+    }
+}
+
+message ParsedValue {
     // The path from the root (of request or response) to retrieve
     // the value.
-    google.protobuf.FieldMask field_path = 2;
+    google.protobuf.FieldMask field_path = 1;
+
+    // The type to parse the value as.
+    enum ParsedType {
+        UNKNOWN = 0;
+        STRING = 1;
+        INTEGER = 2;
+        FLOAT = 3;
+    }
+    ParsedType parsed_type = 2;
 }
