@@ -166,11 +166,13 @@ func getMetricKind(config *configpb.MetricConfig) reflect.Kind {
 	return reflect.Invalid
 }
 
+// Gets the kind of metric values to record.
+// Only ints and floats are supported. Notably, strings are not
+// supported - they should perhaps be modeled as counters with the 'value'
+// being a label.
 func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 	if config.GetParsedValue() != nil {
 		switch config.GetParsedValue().ParsedType {
-		case configpb.ParsedValue_STRING:
-			return reflect.String
 		case configpb.ParsedValue_INTEGER:
 			return reflect.Int64
 		case configpb.ParsedValue_FLOAT:
@@ -179,9 +181,6 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 	}
 
 	if config.GetStaticValue() != nil {
-		if _, ok := config.GetStaticValue().(*configpb.ValueConfig_StringValue); ok {
-			return reflect.String
-		}
 		if _, ok := config.GetStaticValue().(*configpb.ValueConfig_IntegerValue); ok {
 			return reflect.Int64
 		}
