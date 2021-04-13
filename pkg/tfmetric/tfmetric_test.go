@@ -174,15 +174,13 @@ func TestInputCounterWithLabels(t *testing.T) {
 	}
 }
 
-func TestOutputValues(t *testing.T) {
+func TestOutputValuesMetrics(t *testing.T) {
 	configTextProto := `
 		output_metrics {
 			value {
 				value {
 					parsed_value {
-						field_path: {
-							paths: "prediction"
-						}
+						field_path: "prediction"
 						parsed_type: FLOAT
 					}
 				}
@@ -192,6 +190,65 @@ func TestOutputValues(t *testing.T) {
 	prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"prediction\": 0.495 }", OutputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	for spec, instance := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.ValueRecorderInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Float64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotValue := instance.MetricValue
+		wantValue := 0.495
+		if gotValue != wantValue {
+			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+		}
+
+		gotLabelsLen := len(instance.Labels)
+		wantLabelsLen := 0
+		if gotLabelsLen != wantLabelsLen {
+			t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+		}
+	}
+}
+
+func TestOutputNestedValuesMetrics(t *testing.T) {
+	configTextProto := `
+		output_metrics {
+			value {
+				value {
+					parsed_value {
+						field_path: "prediction.0.0"
+						parsed_type: FLOAT
+					}
+				}
+			}
+		}`
+	var config configpb.SidecarConfig
+	prototext.Unmarshal([]byte(configTextProto), &config)
+
+	metrics := GetMetricInstances(&config, "{ \"prediction\": [[0.495]] }", OutputContext)
 
 	gotLen := len(metrics)
 	wantLen := 1

@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package metricrule.sidecar.tfserving.api;
 
-import "google/protobuf/field_mask.proto";
-
 option go_package = "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb";
 
 message SidecarConfig {
@@ -71,9 +69,16 @@ message ValueConfig {
 }
 
 message ParsedValue {
-    // The path from the root (of request or response) to retrieve
-    // the value.
-    google.protobuf.FieldMask field_path = 1;
+    // The path from the root message (e.g request or response) to
+    // retrieve the value.
+    // For example,
+    //   "f.a"
+    // Refers to the field "a" nested in an object at field "f" in
+    // the top-level message.
+    // Numeric path indices can be used for repeated fields / arrays.
+    // For example,
+    //   "0.0"
+    string field_path = 1;
 
     // The type to parse the value as.
     enum ParsedType {

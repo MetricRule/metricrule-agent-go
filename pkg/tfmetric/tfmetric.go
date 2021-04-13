@@ -194,12 +194,20 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 
 func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interface{} {
 	if config.GetParsedValue() != nil {
-		path := config.GetParsedValue().FieldPath.Paths[0]
+		path := config.GetParsedValue().FieldPath
 		pathSegments := strings.Split(path, ".")
 		valueType := config.GetParsedValue().ParsedType
 
 		payload := jsonPayload
 		for _, segment := range pathSegments {
+			if listPayload, ok := payload.([]interface{}); ok {
+				i, err := strconv.Atoi(segment)
+				if err == nil && i < len(listPayload) {
+					payload = listPayload[i]
+				} else {
+					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
+				}
+			}
 			if mapPayload, ok := payload.(map[string]interface{}); ok {
 				payload = mapPayload[segment]
 			}
