@@ -60,15 +60,15 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 
 	if len(config.InputMetrics) > 0 {
 		specs[InputContext] = []MetricInstrumentSpec{}
-		for _, config := range config.InputMetrics {
-			specs[InputContext] = append(specs[InputContext], getInstrumentSpec(config))
+		for _, c := range config.InputMetrics {
+			specs[InputContext] = append(specs[InputContext], getInstrumentSpec(c))
 		}
 	}
 
 	if len(config.OutputMetrics) > 0 {
 		specs[OutputContext] = []MetricInstrumentSpec{}
-		for _, config := range config.OutputMetrics {
-			specs[OutputContext] = append(specs[OutputContext], getInstrumentSpec(config))
+		for _, c := range config.OutputMetrics {
+			specs[OutputContext] = append(specs[OutputContext], getInstrumentSpec(c))
 		}
 	}
 
@@ -77,36 +77,35 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 
 // GetMetricInstances returns a map of metric specifications to the instances to record.
 func GetMetricInstances(config *configpb.SidecarConfig, payload string, context MetricContext) map[MetricInstrumentSpec]MetricInstance {
-	metricConfigs := []*configpb.MetricConfig{}
+	configs := []*configpb.MetricConfig{}
 	if context == InputContext {
-		metricConfigs = config.InputMetrics
+		configs = config.InputMetrics
 	}
 	if context == OutputContext {
-		metricConfigs = config.OutputMetrics
+		configs = config.OutputMetrics
 	}
 
-	var jsonPayload interface{}
-	err := json.Unmarshal([]byte(payload), &jsonPayload)
+	var jsonObj interface{}
+	err := json.Unmarshal([]byte(payload), &jsonObj)
 	if err != nil {
 		log.Fatal("Error when umarshaling payload json", err)
 	}
 
 	output := make(map[MetricInstrumentSpec]MetricInstance)
-	for _, config := range metricConfigs {
-		value := getMetricValue(config, jsonPayload)
-		labels := getMetricLabels(config, jsonPayload)
-		spec := getInstrumentSpec(config)
-		output[spec] = MetricInstance{value, labels}
+	for _, config := range configs {
+		v := getMetricValue(config, jsonObj)
+		l := getMetricLabels(config, jsonObj)
+		s := getInstrumentSpec(config)
+		output[s] = MetricInstance{v, l}
 	}
 
 	return output
 }
 
 func getInstrumentSpec(config *configpb.MetricConfig) MetricInstrumentSpec {
-	instrumentKind := getInstrumentKind(config)
-	metricKind := getMetricKind(config)
-	spec := MetricInstrumentSpec{instrumentKind, metricKind, config.Name}
-	return spec
+	i := getInstrumentKind(config)
+	m := getMetricKind(config)
+	return MetricInstrumentSpec{i, m, config.Name}
 }
 
 func getInstrumentKind(config *configpb.MetricConfig) metric.InstrumentKind {
@@ -124,36 +123,36 @@ func getMetricValue(config *configpb.MetricConfig, jsonPayload interface{}) inte
 		return int64(1)
 	}
 	if config.GetValue() != nil {
-		value := config.GetValue().GetValue()
-		return extractValue(value, jsonPayload)
+		v := config.GetValue().GetValue()
+		return extractValue(v, jsonPayload)
 	}
 	// Default to a counter
 	return int64(1)
 }
 
-func getMetricLabels(config *configpb.MetricConfig, jsonPayload interface{}) []attribute.KeyValue {
-	var labels []attribute.KeyValue
-	for _, labelConfig := range config.Labels {
-		key := extractValue(labelConfig.LabelKey, jsonPayload)
-		value := extractValue(labelConfig.LabelValue, jsonPayload)
+func getMetricLabels(config *configpb.MetricConfig, jsonObj interface{}) []attribute.KeyValue {
+	var ls []attribute.KeyValue
+	for _, l := range config.Labels {
+		key := extractValue(l.LabelKey, jsonObj)
+		value := extractValue(l.LabelValue, jsonObj)
 
 		// The key must be a string.
-		if keyString, ok := key.(string); ok {
-			attributeKey := attribute.Key(keyString)
+		if s, ok := key.(string); ok {
+			k := attribute.Key(s)
 			// We expect floats, ints, and strings only.
-			var keyValue attribute.KeyValue
+			var v attribute.KeyValue
 			switch value := value.(type) {
 			case string:
-				keyValue = attributeKey.String(value)
+				v = k.String(value)
 			case int64:
-				keyValue = attributeKey.Int64(value)
+				v = k.Int64(value)
 			case float64:
-				keyValue = attributeKey.Float64(value)
+				v = k.Float64(value)
 			}
-			labels = append(labels, keyValue)
+			ls = append(ls, v)
 		}
 	}
-	return labels
+	return ls
 }
 
 func getMetricKind(config *configpb.MetricConfig) reflect.Kind {
@@ -195,49 +194,49 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interface{} {
 	if config.GetParsedValue() != nil {
 		path := config.GetParsedValue().FieldPath
-		pathSegments := strings.Split(path, ".")
-		valueType := config.GetParsedValue().ParsedType
+		segments := strings.Split(path, ".")
+		vType := config.GetParsedValue().ParsedType
 
-		payload := jsonPayload
-		for _, segment := range pathSegments {
-			if listPayload, ok := payload.([]interface{}); ok {
+		p := jsonPayload
+		for _, segment := range segments {
+			if listP, ok := p.([]interface{}); ok {
 				i, err := strconv.Atoi(segment)
-				if err == nil && i < len(listPayload) {
-					payload = listPayload[i]
+				if err == nil && i < len(listP) {
+					p = listP[i]
 				} else {
 					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
 				}
 			}
-			if mapPayload, ok := payload.(map[string]interface{}); ok {
-				payload = mapPayload[segment]
+			if mapP, ok := p.(map[string]interface{}); ok {
+				p = mapP[segment]
 			}
 		}
-		switch valuePayload := payload.(type) {
+		switch valueP := p.(type) {
 		case string:
-			switch valueType {
+			switch vType {
 			case configpb.ParsedValue_STRING:
-				return valuePayload
+				return valueP
 			case configpb.ParsedValue_FLOAT:
-				val, err := strconv.ParseFloat(valuePayload, 64)
+				f, err := strconv.ParseFloat(valueP, 64)
 				if err != nil {
 					log.Fatal("Error parsing float", err)
 				}
-				return val
+				return f
 			case configpb.ParsedValue_INTEGER:
-				val, err := strconv.ParseInt(valuePayload, 10, 64)
+				n, err := strconv.ParseInt(valueP, 10, 64)
 				if err != nil {
 					log.Fatal("Error parsing integer", err)
 				}
-				return val
+				return n
 			}
 		case float64:
-			switch valueType {
+			switch vType {
 			case configpb.ParsedValue_FLOAT:
-				return valuePayload
+				return valueP
 			case configpb.ParsedValue_INTEGER:
-				return int64(valuePayload)
+				return int64(valueP)
 			case configpb.ParsedValue_STRING:
-				return fmt.Sprintf("%f", valuePayload)
+				return fmt.Sprintf("%f", valueP)
 			}
 		default:
 			log.Fatal("Unexpected field when parsing JSON payload")

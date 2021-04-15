@@ -96,8 +96,8 @@ func (c noOpWrapper) record(value interface{}) (metric.Measurement, error) {
 
 // Returns an env variable if it exists, else uses the provided fallback.
 func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+	if v, ok := os.LookupEnv(key); ok {
+		return v
 	}
 	return fallback
 }
@@ -128,18 +128,18 @@ func createReverseProxy(port string, meter metric.Meter) *httputil.ReverseProxy 
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
 	config := loadSidecarConfig()
-	instrumentSpecs := tfmetric.GetInstrumentSpecs(config)
-	inputInstrumentSpecs := instrumentSpecs[tfmetric.InputContext]
-	outputInstrumentSpecs := instrumentSpecs[tfmetric.OutputContext]
+	specs := tfmetric.GetInstrumentSpecs(config)
+	inputSpecs := specs[tfmetric.InputContext]
+	outputSpecs := specs[tfmetric.OutputContext]
 
-	inputInstruments := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
-	for _, spec := range inputInstrumentSpecs {
-		inputInstruments[spec] = initializeInstrument(meter, spec)
+	inputInstr := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
+	for _, spec := range inputSpecs {
+		inputInstr[spec] = initializeInstrument(meter, spec)
 	}
 
-	outputInstruments := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
-	for _, spec := range outputInstrumentSpecs {
-		outputInstruments[spec] = initializeInstrument(meter, spec)
+	outputInstr := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
+	for _, spec := range outputSpecs {
+		outputInstr[spec] = initializeInstrument(meter, spec)
 	}
 
 	proxy.ModifyResponse = func(r *http.Response) error {
@@ -148,14 +148,14 @@ func createReverseProxy(port string, meter metric.Meter) *httputil.ReverseProxy 
 			log.Fatal(err)
 		}
 		res := string(dump)
-		jsonBlob := res[strings.Index(res, "{"):]
-		metricsToRecord := tfmetric.GetMetricInstances(config, jsonBlob, tfmetric.OutputContext)
+		j := res[strings.Index(res, "{"):]
+		metrics := tfmetric.GetMetricInstances(config, j, tfmetric.OutputContext)
 		ctx := context.Background()
-		for spec, instance := range metricsToRecord {
-			instrument := outputInstruments[spec]
-			m, err := instrument.record(instance.MetricValue)
+		for spec, m := range metrics {
+			instr := outputInstr[spec]
+			v, err := instr.record(m.MetricValue)
 			if err != nil {
-				meter.RecordBatch(ctx, instance.Labels, m)
+				meter.RecordBatch(ctx, m.Labels, v)
 			}
 		}
 		return nil
@@ -165,20 +165,20 @@ func createReverseProxy(port string, meter metric.Meter) *httputil.ReverseProxy 
 	proxy.Director = func(r *http.Request) {
 		dump, _ := httputil.DumpRequest(r, true)
 		req := string(dump)
-		index := strings.Index(req, "{")
-		if index < 0 {
+		i := strings.Index(req, "{")
+		if i < 0 {
 			log.Printf("No request body found: %s", r.RequestURI)
 			singleHostDirector(r)
 			return
 		}
-		jsonBlob := req[index:]
-		metricsToRecord := tfmetric.GetMetricInstances(config, jsonBlob, tfmetric.InputContext)
+		j := req[i:]
+		metrics := tfmetric.GetMetricInstances(config, j, tfmetric.InputContext)
 		ctx := context.Background()
-		for spec, instance := range metricsToRecord {
-			instrument := inputInstruments[spec]
-			m, err := instrument.record(instance.MetricValue)
+		for spec, m := range metrics {
+			instr := inputInstr[spec]
+			v, err := instr.record(m.MetricValue)
 			if err != nil {
-				meter.RecordBatch(ctx, instance.Labels, m)
+				meter.RecordBatch(ctx, m.Labels, v)
 			}
 		}
 		singleHostDirector(r)
@@ -220,8 +220,8 @@ func initOtel() metric.Meter {
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	metricsPath := getEnv(MetricsPathKey, DefaultMetricsPath)
-	http.HandleFunc(metricsPath, exporter.ServeHTTP)
+	path := getEnv(MetricsPathKey, DefaultMetricsPath)
+	http.HandleFunc(path, exporter.ServeHTTP)
 	return global.Meter("metricrule.sidecar.tfserving")
 }
 
@@ -237,20 +237,20 @@ func serveReverseProxy(proxy *httputil.ReverseProxy, port string, res http.Respo
 }
 
 func main() {
-	applicationPort := getEnv(ApplicationPortKey, ApplicationPortDefault)
-	reverseProxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
+	appPort := getEnv(ApplicationPortKey, ApplicationPortDefault)
+	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
 	// TODO(jishnu): Investigate error for log before flag parse.
-	// glog.Info("Proxy server running on :%v will redirect to application on :%v", reverseProxyPort, applicationPort)
+	// glog.Info("Proxy server running on :%v will redirect to application on :%v", proxyPort, appPort)
 
 	meter := initOtel()
-	proxy := createReverseProxy(applicationPort, meter)
+	proxy := createReverseProxy(appPort, meter)
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		serveReverseProxy(proxy, applicationPort, res, req)
+		serveReverseProxy(proxy, appPort, res, req)
 	})
 	http.HandleFunc("/favicon.ico", func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusNoContent)
 	})
-	if err := http.ListenAndServe(":"+reverseProxyPort, nil); err != nil {
+	if err := http.ListenAndServe(":"+proxyPort, nil); err != nil {
 		glog.Error(err)
 	}
 }
