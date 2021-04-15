@@ -56,7 +56,7 @@ type int64CounterWrapper struct {
 func (c int64CounterWrapper) record(value interface{}) (metric.Measurement, error) {
 	number, ok := value.(int64)
 	if !ok {
-		glog.Error("Unexpected value %v in int 64 counter", value)
+		glog.Errorf("Unexpected value %v in int 64 counter", value)
 		return c.c.Measurement(0), errors.New("Unexpected value")
 	}
 	return c.c.Measurement(number), nil
@@ -69,7 +69,7 @@ type int64ValueRecorderWrapper struct {
 func (c int64ValueRecorderWrapper) record(value interface{}) (metric.Measurement, error) {
 	number, ok := value.(int64)
 	if !ok {
-		glog.Error("Unexpected value %v in int 64 value recorder", value)
+		glog.Errorf("Unexpected value %v in int 64 value recorder", value)
 		return c.c.Measurement(0), errors.New("Unexpected value")
 	}
 	return c.c.Measurement(number), nil
@@ -82,7 +82,7 @@ type float64ValueRecorderWrapper struct {
 func (c float64ValueRecorderWrapper) record(value interface{}) (metric.Measurement, error) {
 	number, ok := value.(float64)
 	if !ok {
-		glog.Error("Unexpected value %v in float 64 value recorder", value)
+		glog.Errorf("Unexpected value %v in float 64 value recorder", value)
 		return c.c.Measurement(0), errors.New("Unexpected value")
 	}
 	return c.c.Measurement(number), nil
@@ -110,7 +110,7 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 	// read from file.
 	contents, err := os.ReadFile(configPath)
 	if err != nil {
-		glog.Warning("Error reading file at config path %v: %v", configPath, err)
+		glog.Warningf("Error reading file at config path %v: %v", configPath, err)
 		return &configpb.SidecarConfig{}
 	}
 	var config configpb.SidecarConfig
@@ -211,7 +211,7 @@ func initializeInstrument(meter metric.Meter, spec tfmetric.MetricInstrumentSpec
 			}
 		}
 	}
-	glog.Error("No instrument could be created for spec %v", spec.Name)
+	glog.Errorf("No instrument could be created for spec %v", spec.Name)
 	return noOpWrapper{}
 }
 
@@ -239,8 +239,7 @@ func serveReverseProxy(proxy *httputil.ReverseProxy, port string, res http.Respo
 func main() {
 	appPort := getEnv(ApplicationPortKey, ApplicationPortDefault)
 	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
-	// TODO(jishnu): Investigate error for log before flag parse.
-	// glog.Info("Proxy server running on :%v will redirect to application on :%v", proxyPort, appPort)
+	glog.Infof("Proxy server running on :%v will redirect to application on :%v", proxyPort, appPort)
 
 	meter := initOtel()
 	proxy := createReverseProxy(appPort, meter)
