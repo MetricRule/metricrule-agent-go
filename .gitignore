@@ -1,4 +1,4 @@
-naries for programs and plugins
+Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
@@ -13,3 +13,6 @@ naries for programs and plugins
 
 # Generated protobufs
 *.pb.go
+
+# Dependency directories
+vendor/
