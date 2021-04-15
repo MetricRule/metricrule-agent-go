@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -237,6 +238,10 @@ func serveReverseProxy(proxy *httputil.ReverseProxy, port string, res http.Respo
 }
 
 func main() {
+	// glog requires flag.Parse to be invoked before usage.
+	// See https://github.com/golang/glog/commit/65d674618f712aa808a7d0104131b9206fc3d5ad.
+	flag.Parse()
+
 	appPort := getEnv(ApplicationPortKey, ApplicationPortDefault)
 	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
 	glog.Infof("Proxy server running on :%v will redirect to application on :%v", proxyPort, appPort)
