@@ -114,8 +114,12 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 		glog.Warningf("Error reading file at config path %v: %v", configPath, err)
 		return &configpb.SidecarConfig{}
 	}
+
 	var config configpb.SidecarConfig
-	prototext.Unmarshal(contents, &config)
+	err = prototext.Unmarshal(contents, &config)
+	if err != nil {
+		glog.Warningf("Error unmarshaling textproto: %v", err)
+	}
 	return &config
 }
 

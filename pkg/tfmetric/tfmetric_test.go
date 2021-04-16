@@ -17,7 +17,7 @@ func TestInputCounterInstrumentSpec(t *testing.T) {
 			simple_counter: {}
 		}`
 	var config configpb.SidecarConfig
-	prototext.Unmarshal([]byte(configTextProto), &config)
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	specs := GetInstrumentSpecs(&config)
 
@@ -58,7 +58,7 @@ func TestInputCounterMetrics(t *testing.T) {
 			simple_counter: {}
 		}`
 	var config configpb.SidecarConfig
-	prototext.Unmarshal([]byte(configTextProto), &config)
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{}", InputContext)
 
@@ -114,7 +114,7 @@ func TestInputCounterWithLabels(t *testing.T) {
 			}
 		}`
 	var config configpb.SidecarConfig
-	prototext.Unmarshal([]byte(configTextProto), &config)
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{}", InputContext)
 
@@ -187,7 +187,7 @@ func TestOutputValuesMetrics(t *testing.T) {
 			}
 		}`
 	var config configpb.SidecarConfig
-	prototext.Unmarshal([]byte(configTextProto), &config)
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"prediction\": 0.495 }", OutputContext)
 
@@ -246,7 +246,7 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 			}
 		}`
 	var config configpb.SidecarConfig
-	prototext.Unmarshal([]byte(configTextProto), &config)
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"prediction\": [[0.495]] }", OutputContext)
 
