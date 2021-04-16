@@ -18,4 +18,4 @@ jobs:
      - name: Build Windows binary
        run: make PLATFORM=windows/amd64
      - name: Build Mac binary
-       run: make PLATFORM=binary/amd64
+       run: make PLATFORM=darwin/amd64
