@@ -1,0 +1,5 @@
+# Ignore built artefacts
+bin/*
+
+# Ignore git subdirectory
+.git/*

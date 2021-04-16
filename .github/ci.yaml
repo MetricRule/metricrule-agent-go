@@ -1,0 +1,21 @@
+me: Continuous Integration
+
+on: [push]
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+     - name: Checkout code
+       uses: actions/checkout@v2
+     - name: Run linter
+       run: make lint
+     - name: Run unit tests
+       run: make unit-test
+     - name: Build Linux binary
+       run: make PLATFORM=linux/amd64
+     - name: Build Windows binary
+       run: make PLATFORM=windows/amd64
+     - name: Build Mac binary
+       run: make PLATFORM=binary/amd64

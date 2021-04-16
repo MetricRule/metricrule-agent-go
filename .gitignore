@@ -16,3 +16,6 @@ Binaries for programs and plugins
 
 # Dependency directories
 vendor/
+
+# Build outputs
+bin/
