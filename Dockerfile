@@ -12,7 +12,7 @@ RUN apt-get update \
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 # Install dependencies
-WORKDIR src
+WORKDIR /src
 ENV CGO_ENABLED=0
 COPY go.* .
 RUN go mod download
