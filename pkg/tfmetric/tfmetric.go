@@ -206,8 +206,7 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				} else {
 					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
 				}
-			}
-			if mapP, ok := p.(map[string]interface{}); ok {
+			} else if mapP, ok := p.(map[string]interface{}); ok {
 				p = mapP[segment]
 			}
 		}
