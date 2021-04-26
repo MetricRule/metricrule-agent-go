@@ -137,7 +137,7 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 // The port should be provided as a string, without the ':', e.g "8080".
 func createReverseProxy(host string, port string, meter metric.Meter) *httputil.ReverseProxy {
 	// parse the url
-	url, _ := url.Parse(":" + port)
+	url, _ := url.Parse("http://" + host + ":" + port)
 
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
@@ -239,9 +239,9 @@ func initOtel() metric.Meter {
 	return global.Meter("metricrule.sidecar.tfserving")
 }
 
-func serveReverseProxy(proxy *httputil.ReverseProxy, port string, res http.ResponseWriter, req *http.Request) {
+func serveReverseProxy(proxy *httputil.ReverseProxy, host string, port string, res http.ResponseWriter, req *http.Request) {
 	// Update the headers to allow for SSL redirection
-	url, _ := url.Parse("http://127.0.0.1:" + port)
+	url, _ := url.Parse("http://" + host + ":" + port)
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
@@ -263,7 +263,7 @@ func main() {
 	meter := initOtel()
 	proxy := createReverseProxy(appHost, appPort, meter)
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		serveReverseProxy(proxy, appPort, res, req)
+		serveReverseProxy(proxy, appHost, appPort, res, req)
 	})
 	http.HandleFunc("/favicon.ico", func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusNoContent)
