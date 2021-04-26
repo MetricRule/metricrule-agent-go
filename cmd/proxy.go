@@ -116,7 +116,6 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 	if len(configPath) == 0 {
 		return &configpb.SidecarConfig{}
 	}
-	// read from file.
 	contents, err := os.ReadFile(configPath)
 	if err != nil {
 		glog.Warningf("Error reading file at config path %v: %v", configPath, err)
@@ -168,7 +167,7 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 		for spec, m := range metrics {
 			instr := outputInstr[spec]
 			v, err := instr.record(m.MetricValue)
-			if err != nil {
+			if err == nil {
 				meter.RecordBatch(ctx, m.Labels, v)
 			}
 		}
@@ -191,7 +190,7 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 		for spec, m := range metrics {
 			instr := inputInstr[spec]
 			v, err := instr.record(m.MetricValue)
-			if err != nil {
+			if err == nil {
 				meter.RecordBatch(ctx, m.Labels, v)
 			}
 		}
@@ -207,36 +206,39 @@ func initializeInstrument(meter metric.Meter, spec tfmetric.MetricInstrumentSpec
 		switch spec.MetricValueKind {
 		case reflect.Int64:
 			c, err := meter.NewInt64Counter(spec.Name)
-			if err != nil {
+			if err == nil {
 				return int64CounterWrapper{c}
 			}
+			glog.Warningf("Error initializing counter: %v", err)
 		}
 	case metric.ValueRecorderInstrumentKind:
 		switch spec.MetricValueKind {
 		case reflect.Int64:
 			c, err := meter.NewInt64ValueRecorder(spec.Name)
-			if err != nil {
+			if err == nil {
 				return int64ValueRecorderWrapper{c}
 			}
+			glog.Warningf("Error initializing recorder: %v", err)
 		case reflect.Float64:
 			c, err := meter.NewFloat64ValueRecorder(spec.Name)
-			if err != nil {
+			if err == nil {
 				return float64ValueRecorderWrapper{c}
 			}
+			glog.Warningf("Error initializing recorder: %v", err)
 		}
 	}
 	glog.Errorf("No instrument could be created for spec %v", spec.Name)
 	return noOpWrapper{}
 }
 
-func initOtel() metric.Meter {
+func initOtel() (metric.Meter, *prometheus.Exporter) {
 	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 	path := getEnv(MetricsPathKey, DefaultMetricsPath)
-	http.HandleFunc(path, exporter.ServeHTTP)
-	return global.Meter("metricrule.sidecar.tfserving")
+	http.Handle(path, exporter)
+	return global.Meter("metricrule.sidecar.tfserving"), exporter
 }
 
 func serveReverseProxy(proxy *httputil.ReverseProxy, host string, port string, res http.ResponseWriter, req *http.Request) {
@@ -260,7 +262,7 @@ func main() {
 	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
 	glog.Infof("Proxy server running on :%v will redirect to application on %v:%v", proxyPort, appHost, appPort)
 
-	meter := initOtel()
+	meter, exporter := initOtel()
 	proxy := createReverseProxy(appHost, appPort, meter)
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
 		serveReverseProxy(proxy, appHost, appPort, res, req)
@@ -271,4 +273,12 @@ func main() {
 	if err := http.ListenAndServe(":"+proxyPort, nil); err != nil {
 		glog.Error(err)
 	}
+
+	// When exiting from your process, call Stop for last collection cycle.
+	defer func() {
+		err := exporter.Controller().Stop(context.TODO())
+		if err != nil {
+			panic(err)
+		}
+	}()
 }

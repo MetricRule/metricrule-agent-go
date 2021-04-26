@@ -239,7 +239,15 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				return fmt.Sprintf("%f", valueP)
 			}
 		default:
-			log.Fatal("Unexpected field when parsing JSON payload")
+			log.Printf("Unexpected field when parsing JSON payload. Value %v, Config %v", p, config)
+			switch vType {
+			case configpb.ParsedValue_FLOAT:
+				return 0.0
+			case configpb.ParsedValue_INTEGER:
+				return 0
+			case configpb.ParsedValue_STRING:
+				return ""
+			}
 		}
 	}
 
