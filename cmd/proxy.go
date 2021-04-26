@@ -22,6 +22,14 @@ import (
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
+// ApplicationHostKey is the address where the 
+// TF Serving application is hosted.
+const ApplicationHostKey = "APPLICATION_PORT_HOST"
+
+// ApplicationHostDefault is the default host for
+// the application (127.0.0.1).
+const ApplicationHostDefault = "127.0.0.1"
+
 // ApplicationPortKey is the key for the env variable for the port of
 // the main TF Serving application.
 const ApplicationPortKey = "APPLICATION_PORT"
@@ -125,10 +133,11 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 
 // Creates a reverse proxy listening at the specified port.
 // Uses the provided meter for metrics.
+// The host should be provided as a string, without a protocol,  e.g "127.0.0.1".
 // The port should be provided as a string, without the ':', e.g "8080".
-func createReverseProxy(port string, meter metric.Meter) *httputil.ReverseProxy {
+func createReverseProxy(host string, port string, meter metric.Meter) *httputil.ReverseProxy {
 	// parse the url
-	url, _ := url.Parse("http://127.0.0.1:" + port)
+	url, _ := url.Parse(":" + port)
 
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
@@ -246,12 +255,13 @@ func main() {
 	// See https://github.com/golang/glog/commit/65d674618f712aa808a7d0104131b9206fc3d5ad.
 	flag.Parse()
 
+	appHost := getEnv(ApplicationHostKey, ApplicationHostDefault)
 	appPort := getEnv(ApplicationPortKey, ApplicationPortDefault)
 	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
-	glog.Infof("Proxy server running on :%v will redirect to application on :%v", proxyPort, appPort)
+	glog.Infof("Proxy server running on :%v will redirect to application on %v:%v", proxyPort, appHost, appPort)
 
 	meter := initOtel()
-	proxy := createReverseProxy(appPort, meter)
+	proxy := createReverseProxy(appHost, appPort, meter)
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
 		serveReverseProxy(proxy, appPort, res, req)
 	})
