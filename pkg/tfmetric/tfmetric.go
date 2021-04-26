@@ -206,8 +206,7 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				} else {
 					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
 				}
-			}
-			if mapP, ok := p.(map[string]interface{}); ok {
+			} else if mapP, ok := p.(map[string]interface{}); ok {
 				p = mapP[segment]
 			}
 		}
@@ -239,7 +238,15 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				return fmt.Sprintf("%f", valueP)
 			}
 		default:
-			log.Fatal("Unexpected field when parsing JSON payload")
+			log.Printf("Unexpected field when parsing JSON payload. Value %v, Config %v", p, config)
+			switch vType {
+			case configpb.ParsedValue_FLOAT:
+				return 0.0
+			case configpb.ParsedValue_INTEGER:
+				return 0
+			case configpb.ParsedValue_STRING:
+				return ""
+			}
 		}
 	}
 
