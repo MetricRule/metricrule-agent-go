@@ -1,24 +1,50 @@
 apiVersion: v1
 data:
-  example_sidecar_config.textproto: "# proto-file: api/proto/metricrule_metric_configuration.proto\n#
-    proto-message: SidecarConfig\n\ninput_metrics {\n    name: \"input_distribution_counts\"\n
-    \   simple_counter {}\n    labels {\n        label_key { string_value: \"Type\"
-    }\n        label_value {\n            parsed_value {\n                field_path
-    { paths: \"Type\" }\n                parsed_type: STRING\n            }\n        }\n
-    \   }\n    labels {\n        label_key { string_value: \"Breed\" }\n        label_value
-    {\n            parsed_value {\n                field_path { paths: \"Breed\" }\n
-    \               parsed_type: STRING\n            }\n        }\n    }\n}\noutput_metrics
-    {\n    name: \"output_prediction_value_logits\"\n    value {\n        value {\n\t\t
-    \   parsed_value {\n\t\t\t\tfield_path { paths: \"prediction\" }\n\t\t\t\tparsed_type:
-    FLOAT\n\t\t\t}\n        }\n    }\n}"
+  example_sidecar_config.textproto: |-
+    # proto-file: api/proto/metricrule_metric_configuration.proto
+    # proto-message: SidecarConfig
+
+    input_metrics {
+        name: "input_distribution_counts"
+        simple_counter {}
+        labels {
+            label_key { string_value: "PetType" }
+            label_value {
+                parsed_value {
+                    field_path: "instances.0.Type.0"
+                    parsed_type: STRING
+                }
+            }
+        }
+        labels {
+            label_key { string_value: "Breed" }
+            label_value {
+                parsed_value {
+                    field_path: "instances.0.Breed1.0"
+                    parsed_type: STRING
+                }
+            }
+        }
+    }
+    output_metrics {
+        name: "output_prediction_value_logits"
+        value {
+            value {
+                parsed_value {
+                    field_path: "predictions.0.0"
+                    parsed_type: FLOAT
+                }
+            }
+        }
+    }
 kind: ConfigMap
 metadata:
-  creationTimestamp: "2021-04-25T07:45:54Z"
+  creationTimestamp: "2021-04-26T17:27:31Z"
   name: petfinder-config-map
   namespace: default
-  resourceVersion: "1216332"
+  resourceVersion: "2153613"
   selfLink: /api/v1/namespaces/default/configmaps/petfinder-config-map
-  uid: 6de6a6ce-b388-47bb-81d0-008ea47c8ef0
+  uid: 491de0bb-3ce2-4840-8731-f0a2774ecccd
 ---
 apiVersion: apps/v1
 kind: Deployment
