@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.2
 
-FROM --platform=${BUILDPLATFORM} golang:1.16.3-buster AS base
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.16.3-buster AS base
 
 WORKDIR /src
 
@@ -12,7 +12,6 @@ RUN apt-get update \
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 # Install dependencies
-WORKDIR /src
 ENV CGO_ENABLED=0
 COPY go.* .
 RUN go mod download
@@ -50,3 +49,4 @@ FROM scratch AS bin-windows
 COPY --from=build /out/proxy /proxy.exe
 
 FROM bin-${TARGETOS} AS bin
+CMD ["./proxy","--logtostderr"]
