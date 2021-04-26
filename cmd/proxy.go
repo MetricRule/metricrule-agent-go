@@ -24,7 +24,7 @@ import (
 
 // ApplicationHostKey is the address where the 
 // TF Serving application is hosted.
-const ApplicationHostKey = "APPLICATION_PORT_HOST"
+const ApplicationHostKey = "APPLICATION_HOST"
 
 // ApplicationHostDefault is the default host for
 // the application (127.0.0.1).
