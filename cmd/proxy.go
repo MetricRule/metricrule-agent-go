@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"reflect"
-	"strings"
 
 	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
@@ -19,10 +16,12 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrtransport"
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
-// ApplicationHostKey is the address where the 
+// ApplicationHostKey is the address where the
 // TF Serving application is hosted.
 const ApplicationHostKey = "APPLICATION_PORT_HOST"
 
@@ -53,55 +52,6 @@ const DefaultMetricsPath = "/metrics"
 // ConfigPathKey is the key for the env variable to set the path for the config
 // to create metrics.
 const ConfigPathKey = "SIDECAR_CONFIG_PATH"
-
-type instrumentWrapper interface {
-	record(value interface{}) (metric.Measurement, error)
-}
-
-type int64CounterWrapper struct {
-	c metric.Int64Counter
-}
-
-func (c int64CounterWrapper) record(value interface{}) (metric.Measurement, error) {
-	number, ok := value.(int64)
-	if !ok {
-		glog.Errorf("Unexpected value %v in int 64 counter", value)
-		return c.c.Measurement(0), errors.New("Unexpected value")
-	}
-	return c.c.Measurement(number), nil
-}
-
-type int64ValueRecorderWrapper struct {
-	c metric.Int64ValueRecorder
-}
-
-func (c int64ValueRecorderWrapper) record(value interface{}) (metric.Measurement, error) {
-	number, ok := value.(int64)
-	if !ok {
-		glog.Errorf("Unexpected value %v in int 64 value recorder", value)
-		return c.c.Measurement(0), errors.New("Unexpected value")
-	}
-	return c.c.Measurement(number), nil
-}
-
-type float64ValueRecorderWrapper struct {
-	c metric.Float64ValueRecorder
-}
-
-func (c float64ValueRecorderWrapper) record(value interface{}) (metric.Measurement, error) {
-	number, ok := value.(float64)
-	if !ok {
-		glog.Errorf("Unexpected value %v in float 64 value recorder", value)
-		return c.c.Measurement(0), errors.New("Unexpected value")
-	}
-	return c.c.Measurement(number), nil
-}
-
-type noOpWrapper struct{}
-
-func (c noOpWrapper) record(value interface{}) (metric.Measurement, error) {
-	return metric.Measurement{}, errors.New("No op wrapper used")
-}
 
 // Returns an env variable if it exists, else uses the provided fallback.
 func getEnv(key, fallback string) string {
@@ -145,90 +95,25 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 	inputSpecs := specs[tfmetric.InputContext]
 	outputSpecs := specs[tfmetric.OutputContext]
 
-	inputInstr := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
+	inputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range inputSpecs {
-		inputInstr[spec] = initializeInstrument(meter, spec)
+		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
 
-	outputInstr := make(map[tfmetric.MetricInstrumentSpec]instrumentWrapper)
+	outputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range outputSpecs {
-		outputInstr[spec] = initializeInstrument(meter, spec)
+		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
 
-	proxy.ModifyResponse = func(r *http.Response) error {
-		dump, err := httputil.DumpResponse(r, true)
-		if err != nil {
-			log.Fatal(err)
-		}
-		res := string(dump)
-		j := res[strings.Index(res, "{"):]
-		metrics := tfmetric.GetMetricInstances(config, j, tfmetric.OutputContext)
-		ctx := context.Background()
-		for spec, m := range metrics {
-			instr := outputInstr[spec]
-			v, err := instr.record(m.MetricValue)
-			if err == nil {
-				meter.RecordBatch(ctx, m.Labels, v)
-			}
-		}
-		return nil
-	}
-
-	singleHostDirector := proxy.Director
-	proxy.Director = func(r *http.Request) {
-		dump, _ := httputil.DumpRequest(r, true)
-		req := string(dump)
-		i := strings.Index(req, "{")
-		if i < 0 {
-			log.Printf("No request body found: %s", r.RequestURI)
-			singleHostDirector(r)
-			return
-		}
-		j := req[i:]
-		metrics := tfmetric.GetMetricInstances(config, j, tfmetric.InputContext)
-		ctx := context.Background()
-		for spec, m := range metrics {
-			instr := inputInstr[spec]
-			v, err := instr.record(m.MetricValue)
-			if err == nil {
-				meter.RecordBatch(ctx, m.Labels, v)
-			}
-		}
-		singleHostDirector(r)
+	proxy.Transport = &mrtransport.Transport{
+		RoundTripper:  http.DefaultTransport,
+		SidecarConfig: config,
+		InInstrs:      inputInstr,
+		OutInstrs:     outputInstr,
+		Meter:         meter,
 	}
 
 	return proxy
-}
-
-func initializeInstrument(meter metric.Meter, spec tfmetric.MetricInstrumentSpec) instrumentWrapper {
-	switch spec.InstrumentKind {
-	case metric.CounterInstrumentKind:
-		switch spec.MetricValueKind {
-		case reflect.Int64:
-			c, err := meter.NewInt64Counter(spec.Name)
-			if err == nil {
-				return int64CounterWrapper{c}
-			}
-			glog.Warningf("Error initializing counter: %v", err)
-		}
-	case metric.ValueRecorderInstrumentKind:
-		switch spec.MetricValueKind {
-		case reflect.Int64:
-			c, err := meter.NewInt64ValueRecorder(spec.Name)
-			if err == nil {
-				return int64ValueRecorderWrapper{c}
-			}
-			glog.Warningf("Error initializing recorder: %v", err)
-		case reflect.Float64:
-			c, err := meter.NewFloat64ValueRecorder(spec.Name)
-			if err == nil {
-				return float64ValueRecorderWrapper{c}
-			}
-			glog.Warningf("Error initializing recorder: %v", err)
-		}
-	}
-	glog.Errorf("No instrument could be created for spec %v", spec.Name)
-	return noOpWrapper{}
 }
 
 func initOtel() (metric.Meter, *prometheus.Exporter) {
