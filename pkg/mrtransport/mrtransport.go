@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
@@ -30,6 +31,7 @@ type Transport struct {
 // - Uses the backing RoundTripper to send the request and get a response.
 // - Logs response metrics.
 func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error) {
+	ctxLabels := []attribute.KeyValue{}
 	if strings.Contains(req.Header.Get("Content-Type"), "json") {
 		reqDump, err := httputil.DumpRequest(req, true)
 		if err != nil {
@@ -39,13 +41,14 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		reqDumpS := string(reqDump)
 		i := strings.Index(reqDumpS, "{")
 		j := reqDumpS[i:]
+		ctxLabels = tfmetric.GetContextLabels(t.SidecarConfig, j, tfmetric.InputContext)
 		metrics := tfmetric.GetMetricInstances(t.SidecarConfig, j, tfmetric.InputContext)
 		ctx := context.Background()
 		for spec, m := range metrics {
 			instr := t.InInstrs[spec]
 			v, err := instr.Record(m.MetricValue)
 			if err == nil {
-				t.Meter.RecordBatch(ctx, m.Labels, v)
+				t.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
 			}
 		}
 	}
@@ -69,7 +72,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 			instr := t.OutInstrs[spec]
 			v, err := instr.Record(m.MetricValue)
 			if err == nil {
-				t.Meter.RecordBatch(ctx, m.Labels, v)
+				t.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
 			}
 		}
 	}
