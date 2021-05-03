@@ -5,15 +5,6 @@ input_metrics {
     name: "input_distribution_counts"
     simple_counter {}
     labels {
-        label_key { string_value: "PetType" }
-        label_value {
-            parsed_value {
-                field_path: "instances.0.Type.0"
-                parsed_type: STRING
-            }
-        }
-    }
-    labels {
         label_key { string_value: "Breed" }
         label_value {
             parsed_value {
@@ -31,6 +22,15 @@ output_metrics {
                 field_path: "predictions.0.0"
                 parsed_type: FLOAT
             }
+        }
+    }
+}
+context_labels_from_input {
+    label_key { string_value: "PetType" }
+    label_value {
+        parsed_value {
+            field_path: "instances.0.Type.0"
+            parsed_type: STRING
         }
     }
 }
