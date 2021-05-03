@@ -103,6 +103,7 @@ type responseLogData struct {
 	m MetricRecorder
 }
 
+// logResponse logs metrics based on output data and labels in context.
 func logResponseData(d responseLogData, ctxChan <-chan []attribute.KeyValue) {
 	ctxLabels := <-ctxChan
 	strdump := string(d.dump)
