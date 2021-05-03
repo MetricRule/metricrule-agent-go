@@ -21,7 +21,7 @@ import (
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
-// ApplicationHostKey is the address where the
+// ApplicationHostKey is the address where the 
 // TF Serving application is hosted.
 const ApplicationHostKey = "APPLICATION_PORT_HOST"
 
