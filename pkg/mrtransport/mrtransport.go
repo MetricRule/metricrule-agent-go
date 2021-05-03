@@ -37,26 +37,17 @@ type Transport struct {
 // - Uses the backing RoundTripper to send the request and get a response.
 // - Logs response metrics.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	ctxLabels := []attribute.KeyValue{}
+	ctxChan := make(chan []attribute.KeyValue, 1)
 	if strings.Contains(req.Header.Get("Content-Type"), "json") {
-		reqDump, err := httputil.DumpRequest(req, true)
+		dump, err := httputil.DumpRequest(req, true)
 		if err != nil {
-			return nil, err
+			return nil, err;
 		}
 
-		reqDumpS := string(reqDump)
-		i := strings.Index(reqDumpS, "{")
-		j := reqDumpS[i:]
-		ctxLabels = tfmetric.GetContextLabels(t.SidecarConfig, j, tfmetric.InputContext)
-		metrics := tfmetric.GetMetricInstances(t.SidecarConfig, j, tfmetric.InputContext)
-		ctx := context.Background()
-		for spec, m := range metrics {
-			instr := t.InInstrs[spec]
-			v, err := instr.Record(m.MetricValue)
-			if err == nil {
-				t.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
-			}
-		}
+		reqdata := requestLogData{dump, t.SidecarConfig, t.InInstrs, t.Meter}
+		go logRequestData(reqdata, ctxChan)
+	} else {
+		ctxChan <- []attribute.KeyValue{}
 	}
 
 	res, err := t.RoundTripper.RoundTrip(req)
@@ -65,23 +56,65 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	if strings.Contains(res.Header.Get("Content-Type"), "json") {
-		resDump, err := httputil.DumpResponse(res, true)
+		dump, err := httputil.DumpResponse(res, true);
 		if err != nil {
-			return nil, err
+			return res, err
 		}
 
-		resDumpS := string(resDump)
-		j := resDumpS[strings.Index(resDumpS, "{"):]
-		metrics := tfmetric.GetMetricInstances(t.SidecarConfig, j, tfmetric.OutputContext)
-		ctx := context.Background()
-		for spec, m := range metrics {
-			instr := t.OutInstrs[spec]
-			v, err := instr.Record(m.MetricValue)
-			if err == nil {
-				t.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
-			}
-		}
+		resdata := responseLogData{dump, t.SidecarConfig, t.OutInstrs, t.Meter}
+		go logResponseData(resdata, ctxChan)
 	}
 
 	return res, nil
+}
+
+type requestLogData struct {
+	dump []byte
+	config *configpb.SidecarConfig
+	instrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	m MetricRecorder
+}
+
+// logRequestData logs metrics based on the input metrics,
+// and communicates context labels to the parameter channel.
+func logRequestData(d requestLogData, ctxChan chan<- []attribute.KeyValue) {
+	defer close(ctxChan)
+	
+	strdump := string(d.dump)
+	i := strings.Index(strdump, "{")
+	j := strdump[i:]
+	ctxLabels := tfmetric.GetContextLabels(d.config, j, tfmetric.InputContext)
+	metrics := tfmetric.GetMetricInstances(d.config, j, tfmetric.InputContext)
+	ctx := context.Background()
+	for spec, m := range metrics {
+		instr := d.instrs[spec]
+		v, err := instr.Record(m.MetricValue)
+		if err == nil {
+			d.m.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
+		}
+	}
+	ctxChan <- ctxLabels
+}
+
+type responseLogData struct {
+	dump []byte
+	config *configpb.SidecarConfig
+	instrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	m MetricRecorder
+}
+
+// logResponse logs metrics based on output data and labels in context.
+func logResponseData(d responseLogData, ctxChan <-chan []attribute.KeyValue) {
+	ctxLabels := <-ctxChan
+	strdump := string(d.dump)
+	j := strdump[strings.Index(strdump, "{"):]
+	metrics := tfmetric.GetMetricInstances(d.config, j, tfmetric.OutputContext)
+	ctx := context.Background()
+	for spec, m := range metrics {
+		instr := d.instrs[spec]
+		v, err := instr.Record(m.MetricValue)
+		if err == nil {
+			d.m.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
+		}
+	}
 }
