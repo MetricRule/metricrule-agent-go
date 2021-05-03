@@ -14,23 +14,29 @@ import (
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
+// MetricRecorder is an interface that is able to record a measurement with labels.
+// The expected instance of this is metric.Meter.
+type MetricRecorder interface {
+	RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurement ...metric.Measurement)
+}
+
 // Transport is an HTTP transport that logs request and response metrics.
 // Should be initialized by a backing RoundTripper (e.g http.DefaultTransport),
 // a sidecar config, lists of input and output instruments, an opentelemetry
-// meter.
+// meter (or an equivalent recorder).
 type Transport struct {
 	http.RoundTripper
 	*configpb.SidecarConfig
 	InInstrs  map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	OutInstrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
-	metric.Meter
+	Meter     MetricRecorder
 }
 
 // RoundTrip does the following in order:
 // - Logs request metrics.
 // - Uses the backing RoundTripper to send the request and get a response.
 // - Logs response metrics.
-func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error) {
+func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctxLabels := []attribute.KeyValue{}
 	if strings.Contains(req.Header.Get("Content-Type"), "json") {
 		reqDump, err := httputil.DumpRequest(req, true)
@@ -53,7 +59,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		}
 	}
 
-	res, err = t.RoundTripper.RoundTrip(req)
+	res, err := t.RoundTripper.RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}

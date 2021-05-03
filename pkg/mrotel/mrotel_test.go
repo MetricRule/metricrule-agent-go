@@ -10,10 +10,6 @@ import (
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
-type FakeMeterImpl struct {
-	metric.Meter
-}
-
 func TestInitializeIntCounterAndRecord(t *testing.T) {
 	spec := tfmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.CounterInstrumentKind,
