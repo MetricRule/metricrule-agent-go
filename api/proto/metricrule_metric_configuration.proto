@@ -14,6 +14,10 @@ message SidecarConfig {
     // Each entry represents a separate metric.
     // Optional. If empty, no output data is recorded as metrics.
     repeated MetricConfig output_metrics = 2;
+
+    // Configuration for labels parsed from the input data to be attached
+    // to all metrics (input and output).
+    repeated LabelConfig context_labels_from_input = 3; 
 }
 
 // Configures a metric from either the input or output of the serving API.

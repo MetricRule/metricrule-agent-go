@@ -5,19 +5,10 @@ input_metrics {
     name: "input_distribution_counts"
     simple_counter {}
     labels {
-        label_key { string_value: "Type" }
-        label_value {
-            parsed_value {
-                field_path { paths: "Type" }
-                parsed_type: STRING
-            }
-        }
-    }
-    labels {
         label_key { string_value: "Breed" }
         label_value {
             parsed_value {
-                field_path { paths: "Breed" }
+                field_path: "instances.0.Breed1.0"
                 parsed_type: STRING
             }
         }
@@ -27,10 +18,19 @@ output_metrics {
     name: "output_prediction_value_logits"
     value {
         value {
-		    parsed_value {
-				field_path { paths: "prediction" }
-				parsed_type: FLOAT
-			}
+            parsed_value {
+                field_path: "predictions.0.0"
+                parsed_type: FLOAT
+            }
+        }
+    }
+}
+context_labels_from_input {
+    label_key { string_value: "PetType" }
+    label_value {
+        parsed_value {
+            field_path: "instances.0.Type.0"
+            parsed_type: STRING
         }
     }
 }
