@@ -21,7 +21,11 @@ A demo Grafana instance is running here against a toy [PetFinder](https://www.te
 
 ### Input Feature Distributions
 
-### Output Feature Distributions
+![Count of Input Pets By Gender](<https://metricrule.github.io/img/inputcount.png> =250x250)
+
+### Output Distributions
+
+![Distribution of Output Predictions](<https://metricrule.github.io/img/outputlogits.png> =250x250)
 
 ### Output Distribution by Input Slice
 
