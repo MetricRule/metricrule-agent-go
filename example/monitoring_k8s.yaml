@@ -137,7 +137,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_AUTH_ANONYMOUS_ENABLED
-            - value: "true"
+              value: "true"
           ports:
             - containerPort: 3000
               name: http-grafana
