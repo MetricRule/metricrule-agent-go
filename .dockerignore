@@ -3,3 +3,6 @@ bin/*
 
 # Ignore git subdirectory
 .git/*
+
+# Ignore example subdirectory
+.example/*

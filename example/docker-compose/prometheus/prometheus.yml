@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "tf_serving"
+
+    scrape_interval: 5s
+
+    static_configs:
+       - targets: ["petfinder:8501"]
+
+    metrics_path: "/monitoring/prometheus/metrics"
+
+  - job_name: "tf_metric_rule"
+
+    scrape_interval: 5s
+
+    static_configs:
+       - targets: ["metricrule:8551"]
