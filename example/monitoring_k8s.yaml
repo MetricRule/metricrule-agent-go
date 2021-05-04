@@ -75,6 +75,7 @@ spec:
       containers:
       - name: prometheus
         image: prom/prometheus:v2.1.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9090
           name: default
@@ -134,6 +135,9 @@ spec:
         - name: grafana
           image: grafana/grafana:7.5.2
           imagePullPolicy: IfNotPresent
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+            - value: "true"
           ports:
             - containerPort: 3000
               name: http-grafana
