@@ -15,7 +15,7 @@ The motivation of this project is to make it easier to monitor feature distribut
 
 ## Screenshots and Demo
 
-A demo Grafana instance is running here against a toy [PetFinder](https://www.tensorflow.org/datasets/catalog/pet_finder) model with simulated traffic.
+Taken with a demo Grafana instance of this agent running with a toy [PetFinder](https://www.tensorflow.org/datasets/catalog/pet_finder) model with simulated traffic.
 
 > The model is built using [this Tensorflow tutorial](https://www.tensorflow.org/tutorials/structured_data/feature_columns)
 
@@ -29,6 +29,8 @@ A demo Grafana instance is running here against a toy [PetFinder](https://www.te
 
 ### Output Distribution by Input Slice
 
+![Distribution of Outputs by Input Slice](<https://metricrule.github.io/img/outputsbyinput.png>)
+
 ## Get Started
 
 An image of the agent is maintained on [Docker Hub](https://hub.docker.com/repository/docker/metricrule/metricrule-sidecar-tfserving).
@@ -37,7 +39,7 @@ The agent should be deployed as a reverse proxy sidecar to your serving deployme
 
 The expected usage is to use [Prometheus](https://github.com/prometheus/prometheus) to periodically scrape these endpoints. This can be then used as a data source for a [Grafana](https://github.com/grafana/grafana) dashboard for visualizations and alerts.
 
-End-to-end examples with [Kubernetes](https://kubernetes.io/) and [Docker Compose](https://docs.docker.com/compose/) are provided in the `example/` subdirectory.
+End-to-end examples with [Kubernetes](https://kubernetes.io/) and [Docker Compose](https://docs.docker.com/compose/) are provided in the [example/](example) subdirectory.
 
 ## Configuration
 
@@ -47,9 +49,9 @@ The configuration allows specifying metrics based on the JSON input features and
 
 Additionally, input features can be parsed to create `labels` that are tagged to input and output metric instances.
 
-The config format is defined at [api/proto/metricrule_metric_configuration.proto](https://github.com/MetricRule/metricrule-sidecar-tfserving/blob/main/api/proto/metricrule_metric_configuration.proto).
+The config format is defined at [api/proto/metricrule_metric_configuration.proto](api/proto/metricrule_metric_configuration.proto).
 
-See an example configuration used for the demo at [configs/example_sidecar_config.textproto](https://github.com/MetricRule/metricrule-sidecar-tfserving/blob/main/configs/example_sidecar_config.textproto).
+See an example configuration used for the demo at [configs/example_sidecar_config.textproto](configs/example_sidecar_config.textproto).
 
 The configuration is supplied as a config file, with location defined by the `SIDECAR_CONFIG_PATH` environment variable.
 
@@ -64,10 +66,10 @@ Configuration is through environment variables. Some options of interest are:
 
 ## Contribute
 
-We ❤️ contributions. Please see CONTRIBUTING.md for contributing code.
+We ❤️ contributions. Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Please feel free to use the [Issue Tracker](https://github.com/MetricRule/metricrule-sidecar-tfserving/issues) and [GitHub Discussions](https://github.com/MetricRule/metricrule-sidecar-tfserving/discussions) to reach out to the maintainers.
 
 ## For more information
 
-Please refer to metricrule.com for more information.
+Please refer to [metricrule.com](https://metricrule.com) for more information.
