@@ -1,0 +1,140 @@
+apiVersion: v1
+data:
+  example_sidecar_config.textproto: |-
+    # proto-file: api/proto/metricrule_metric_configuration.proto
+    # proto-message: SidecarConfig
+
+    input_metrics {
+        name: "input_distribution_counts"
+        simple_counter {}
+    }
+    output_metrics {
+        name: "output_prediction_value_logits"
+        value {
+            value {
+                parsed_value {
+                    field_path: "predictions.0.0"
+                    parsed_type: FLOAT
+                }
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "PetType" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.Type.0"
+                parsed_type: STRING
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "Breed" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.Breed1.0"
+                parsed_type: STRING
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "Gender" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.Gender.0"
+                parsed_type: STRING
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "Color" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.Color1.0"
+                parsed_type: STRING
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "Maturity Size" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.MaturitySize.0"
+                parsed_type: STRING
+            }
+        }
+    }
+    context_labels_from_input {
+        label_key { string_value: "Health" }
+        label_value {
+            parsed_value {
+                field_path: "instances.0.Health.0"
+                parsed_type: STRING
+            }
+        }
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2021-04-26T17:27:31Z"
+  name: petfinder-config-map
+  namespace: default
+  resourceVersion: "2153613"
+  selfLink: /api/v1/namespaces/default/configmaps/petfinder-config-map
+  uid: 491de0bb-3ce2-4840-8731-f0a2774ecccd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petfinder-deployment
+spec:
+  selector:
+    matchLabels:
+      app: petfinder-server
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: petfinder-server
+    spec:
+      containers:
+      - name: petfinder-container
+        image: asia.gcr.io/metricrule-tfserving-demo/petfinder
+        ports:
+        - containerPort: 8501
+      - name: metricrule-sidecar-container
+        image: metricrule/metricrule-sidecar-tfserving
+        env:
+        - name: APPLICATION_PORT
+          value: "8501"
+        - name: REVERSE_PROXY_PORT
+          value: "8551"
+        - name: SIDECAR_CONFIG_PATH
+          value: "/config/sidecar.textproto"
+        ports:
+        - containerPort: 8551
+        volumeMounts:
+        - name: config
+          mountPath: "/config"
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: petfinder-config-map
+          items:
+          - key: example_sidecar_config.textproto
+            path: sidecar.textproto
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: petfinder-service
+  name: petfinder-service
+spec:
+  ports:
+  - port: 8501
+    targetPort: 8551
+  selector:
+    app: petfinder-server
+  type: LoadBalancer
+

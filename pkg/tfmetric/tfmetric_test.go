@@ -291,3 +291,174 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 		}
 	}
 }
+
+func TestMultipleInputsNestedMetrics(t *testing.T) {
+	configTextProto := `
+		input_metrics {
+			name: "input_distribution_counts"
+			simple_counter {}
+			labels {
+				label_key { string_value: "PetType" }
+				label_value {
+					parsed_value {
+						field_path: "instances.0.Type.0"
+						parsed_type: STRING
+					}
+				}
+			}
+			labels {
+				label_key { string_value: "Breed" }
+				label_value {
+					parsed_value {
+						field_path: "instances.0.Breed1.0"
+						parsed_type: STRING
+					}
+				}
+			}
+		}`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	response := `{
+		"instances": [
+			{
+				"Type": [
+					"Cat"
+				],
+				"Age": [
+					4
+				],
+				"Breed1": [
+					"Turkish"
+				]
+			}
+		]
+	}`
+	metrics := GetMetricInstances(&config, response, InputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	for spec, instance := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.CounterInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Int64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotValue := instance.MetricValue
+		wantValue := int64(1)
+		if gotValue != wantValue {
+			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+		}
+
+		gotLabelsLen := len(instance.Labels)
+		wantLabelsLen := 2
+		if gotLabelsLen != wantLabelsLen {
+			t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+		}
+
+		if gotLabelsLen == 0 {
+			return
+		}
+
+		got1Label := instance.Labels[0]
+		want1LabelKey := "PetType"
+		want1LabelValue := "Cat"
+		if string(got1Label.Key) != want1LabelKey {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Key, want1LabelKey)
+		}
+		if got1Label.Value.AsString() != want1LabelValue {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Value.AsString(), want1LabelValue)
+		}
+
+		got2Label := instance.Labels[1]
+		want2LabelKey := "Breed"
+		want2LabelValue := "Turkish"
+		if string(got2Label.Key) != want2LabelKey {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Key, want2LabelKey)
+		}
+		if got2Label.Value.AsString() != want2LabelValue {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+		}
+	}
+}
+
+func TestGetInputContextLabels(t *testing.T) {
+	configTextProto := `
+		context_labels_from_input {
+			label_key { string_value: "PetType" }
+			label_value {
+				parsed_value {
+					field_path: "Type"
+					parsed_type: STRING
+				}
+			}
+		}
+		context_labels_from_input {
+			label_key { string_value: "Breed" }
+			label_value {
+				parsed_value {
+					field_path: "Breed"
+					parsed_type: STRING
+				}
+			}
+		}
+		`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	response := `{
+		"Type": "Cat",
+		"Breed": "Turkish"
+	}`
+	labels := GetContextLabels(&config, response, InputContext)
+
+	gotLen := len(labels)
+	wantLen := 2
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of labels, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	got1Label := labels[0]
+	want1LabelKey := "PetType"
+	want1LabelValue := "Cat"
+	if string(got1Label.Key) != want1LabelKey {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Key, want1LabelKey)
+	}
+	if got1Label.Value.AsString() != want1LabelValue {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Value.AsString(), want1LabelValue)
+	}
+
+	got2Label := labels[1]
+	want2LabelKey := "Breed"
+	want2LabelValue := "Turkish"
+	if string(got2Label.Key) != want2LabelKey {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Key, want2LabelKey)
+	}
+	if got2Label.Value.AsString() != want2LabelValue {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+	}
+}

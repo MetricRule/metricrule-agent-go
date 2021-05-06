@@ -1,0 +1,46 @@
+version: "3.2"
+
+networks:
+  grafana:
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.21.0
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - ./prometheus_data/:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - 9090:9090
+    networks:
+      - grafana
+
+  grafana:
+    image: grafana/grafana:7.3.6
+    ports:
+      - 3000:3000
+
+  petfinder:
+    image: asia.gcr.io/metricrule-tfserving-demo/petfinder
+    
+    ports:
+       - 8501:8501
+    environment:
+       MODEL_NAME: petfinder
+       TF_CPP_VMODULE: http_server=1
+    networks:
+       - grafana
+
+  metricrule:
+    image: metricrule/metricrule-sidecar-tfserving:latest
+    ports:
+       - 8551:8551
+    environment:
+       APPLICATION_PORT_HOST: "petfinder"
+       SIDECAR_CONFIG_PATH: "/config/sidecar_config.textproto"
+    volumes:
+       - ./metricrule:/config
+    networks:
+       - grafana

@@ -102,6 +102,33 @@ func GetMetricInstances(config *configpb.SidecarConfig, payload string, context 
 	return output
 }
 
+// GetContextLabels returns a list of labels extracted for the supplied context.
+// This is currently only supported for InputContext.
+func GetContextLabels(config *configpb.SidecarConfig, payload string, context MetricContext) []attribute.KeyValue {
+	configs := []*configpb.LabelConfig{}
+	if context == InputContext {
+		configs = config.ContextLabelsFromInput
+	}
+	if context == OutputContext {
+		return []attribute.KeyValue{}
+	}
+
+	var jsonObj interface{}
+	err := json.Unmarshal([]byte(payload), &jsonObj)
+	if err != nil {
+		log.Fatal("Error when umarshaling payload json", err)
+	}
+
+	var ls []attribute.KeyValue
+	for _, lconf := range configs {
+		l := getMetricLabel(lconf, jsonObj)
+		if l.Valid() {
+			ls = append(ls, l)
+		}
+	}
+	return ls
+}
+
 func getInstrumentSpec(config *configpb.MetricConfig) MetricInstrumentSpec {
 	i := getInstrumentKind(config)
 	m := getMetricKind(config)
@@ -132,27 +159,34 @@ func getMetricValue(config *configpb.MetricConfig, jsonPayload interface{}) inte
 
 func getMetricLabels(config *configpb.MetricConfig, jsonObj interface{}) []attribute.KeyValue {
 	var ls []attribute.KeyValue
-	for _, l := range config.Labels {
-		key := extractValue(l.LabelKey, jsonObj)
-		value := extractValue(l.LabelValue, jsonObj)
-
-		// The key must be a string.
-		if s, ok := key.(string); ok {
-			k := attribute.Key(s)
-			// We expect floats, ints, and strings only.
-			var v attribute.KeyValue
-			switch value := value.(type) {
-			case string:
-				v = k.String(value)
-			case int64:
-				v = k.Int64(value)
-			case float64:
-				v = k.Float64(value)
-			}
-			ls = append(ls, v)
+	for _, lconf := range config.Labels {
+		l := getMetricLabel(lconf, jsonObj)
+		if l.Valid() {
+			ls = append(ls, l)
 		}
 	}
 	return ls
+}
+
+func getMetricLabel(config *configpb.LabelConfig, jsonObj interface{}) attribute.KeyValue {
+	key := extractValue(config.LabelKey, jsonObj)
+	value := extractValue(config.LabelValue, jsonObj)
+
+	var v attribute.KeyValue
+	// The key must be a string.
+	if s, ok := key.(string); ok {
+		k := attribute.Key(s)
+		// We expect floats, ints, and strings only.
+		switch value := value.(type) {
+		case string:
+			v = k.String(value)
+		case int64:
+			v = k.Int64(value)
+		case float64:
+			v = k.Float64(value)
+		}
+	}
+	return v
 }
 
 func getMetricKind(config *configpb.MetricConfig) reflect.Kind {
@@ -206,8 +240,7 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				} else {
 					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
 				}
-			}
-			if mapP, ok := p.(map[string]interface{}); ok {
+			} else if mapP, ok := p.(map[string]interface{}); ok {
 				p = mapP[segment]
 			}
 		}
@@ -239,7 +272,15 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 				return fmt.Sprintf("%f", valueP)
 			}
 		default:
-			log.Fatal("Unexpected field when parsing JSON payload")
+			log.Printf("Unexpected field when parsing JSON payload. Value %v, Config %v", p, config)
+			switch vType {
+			case configpb.ParsedValue_FLOAT:
+				return 0.0
+			case configpb.ParsedValue_INTEGER:
+				return 0
+			case configpb.ParsedValue_STRING:
+				return ""
+			}
 		}
 	}
 
