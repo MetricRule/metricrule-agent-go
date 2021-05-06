@@ -60,7 +60,7 @@ The configuration is supplied as a config file, with location defined by the `SI
 Configuration is through environment variables. Some options of interest are:
 
 - Set `REVERSE_PROXY_PORT` to the port the agent is running on, e.g `"9551"`
-- Set `APPLICATION_PORT_HOST` to the host the serving endpoint is running on, defaults to `"127.0.0.1"`
+- Set `APPLICATION_HOST` to the host the serving endpoint is running on, defaults to `"127.0.0.1"`
 - Set `APPLICATION_PORT` to the port the serving endpoint is running on, e.g `"8501"`
 - Set `METRICS_PATH` to the path where a HTTP endpoint for metrics scraping should be exposed at, defaults to `"/metrics"`
 
