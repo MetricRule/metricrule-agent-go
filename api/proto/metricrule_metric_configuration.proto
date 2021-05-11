@@ -81,7 +81,10 @@ message ParsedValue {
     // the top-level message.
     // Numeric path indices can be used for repeated fields / arrays.
     // For example,
-    //   "0.0"
+    //   "f.0"
+    // For all numeric path indices to be used (to log multiple metrics)
+    // use *. For example,
+    //   "f.*"
     string field_path = 1;
 
     // The type to parse the value as.
