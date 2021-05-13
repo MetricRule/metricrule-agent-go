@@ -26,9 +26,6 @@ ARG TARGETOS
 ARG TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
   GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/proxy cmd/proxy/main.go
-RUN --mount=type=cache,target=/root/.cache/go-build \
-  GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o \
-  /out/eventlistener cmd/eventlistener/main.go
 
 FROM base AS unit-test
 RUN --mount=type=cache,target=/root/.cache/go-build \
@@ -44,13 +41,12 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM scratch AS bin-unix
 COPY --from=build /out/proxy /
-COPY --from=build /out/eventlistener /
 
 FROM bin-unix AS bin-linux
 FROM bin-unix AS bin-darwin
 
 FROM scratch AS bin-windows
 COPY --from=build /out/proxy /proxy.exe
-COPY --from=build /eventlistener /eventlistener.exe
 
 FROM bin-${TARGETOS} AS bin
+CMD ["./proxy","--logtostderr"]
