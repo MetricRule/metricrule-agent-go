@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/golang/glog"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -15,6 +16,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrrecorder"
+	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
 // MetricsPathKey is the key for the env variable to set the path that metrics will be served on.
@@ -26,6 +30,12 @@ const DefaultMetricsPath = "/metrics"
 // ConfigPathKey is the key for the env variable to set the path for the config
 // to create metrics.
 const ConfigPathKey = "SIDECAR_CONFIG_PATH"
+
+// KfServingRequestType is the cloud event type for a KFServing Request.
+const KfServingRequestType = "org.kubeflow.serving.inference.request"
+
+// KfServingResponseType is the cloud event type for a KFServing Response.
+const KfServingResponseType = "org.kubeflow.serving.inference.response"
 
 func getEnv(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok {
@@ -64,8 +74,64 @@ func initOtel() (metric.Meter, *prometheus.Exporter) {
 	return global.Meter("metricrule.sidecar.tfserving"), exporter
 }
 
-func record(event cloudevents.Event, meter metric.Meter) {
-	log.Printf("☁️  cloudevents.Event\n%s", event.String())
+type recordConfig struct {
+	config    *configpb.SidecarConfig
+	inInstrs  map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	outInstrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+}
+
+func getRecordConfig(meter metric.Meter) recordConfig {
+	config := loadSidecarConfig()
+	specs := tfmetric.GetInstrumentSpecs(config)
+	inputSpecs := specs[tfmetric.InputContext]
+	outputSpecs := specs[tfmetric.OutputContext]
+
+	inputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	for _, spec := range inputSpecs {
+		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+	}
+
+	outputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	for _, spec := range outputSpecs {
+		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+	}
+
+	return recordConfig{config, inputInstr, outputInstr}
+}
+
+type recordArgs struct {
+	event    cloudevents.Event
+	config   recordConfig
+	meter    metric.Meter
+	ctxChans map[string](chan []attribute.KeyValue)
+}
+
+func record(args recordArgs) {
+	if args.event.Type() == KfServingRequestType {
+		reqData := mrrecorder.RequestLogData{
+			Dump:   args.event.Data(),
+			Config: args.config.config,
+			Instrs: args.config.inInstrs,
+			Meter:  args.meter,
+		}
+		ctxChan := make(chan []attribute.KeyValue, 1)
+		args.ctxChans[args.event.ID()] = ctxChan
+		go mrrecorder.LogRequestData(reqData, ctxChan)
+	} else if args.event.Type() == KfServingResponseType {
+		resData := mrrecorder.ResponseLogData{
+			Dump:   args.event.Data(),
+			Config: args.config.config,
+			Instrs: args.config.outInstrs,
+			Meter:  args.meter,
+		}
+		if reqChan, ok := args.ctxChans[args.event.ID()]; ok {
+			go mrrecorder.LogResponseData(resData, reqChan)
+		} else {
+			dummyChan := make(chan []attribute.KeyValue, 1)
+			dummyChan <- []attribute.KeyValue{}
+			go mrrecorder.LogResponseData(resData, dummyChan)
+		}
+	}
 }
 
 func main() {
@@ -73,14 +139,18 @@ func main() {
 	// See https://github.com/golang/glog/commit/65d674618f712aa808a7d0104131b9206fc3d5ad.
 	flag.Parse()
 
-	meter, exporter := initOtel()
-	c, err := cloudevents.NewDefaultClient()
+	c, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatal("Failed to create client, ", err)
 	}
-	c.StartReceiver(context.Background(), func(e cloudevents.Event) {
-		record(e, meter)
-	})
+
+	meter, exporter := initOtel()
+	config := getRecordConfig(meter)
+	ctxChans := make(map[string](chan []attribute.KeyValue))
+
+	log.Fatal(c.StartReceiver(context.Background(), func(e cloudevents.Event) {
+		record(recordArgs{e, config, meter, ctxChans})
+	}))
 
 	// When exiting from your process, call Stop for last collection cycle.
 	defer func() {
