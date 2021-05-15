@@ -51,6 +51,6 @@ FROM bin-unix AS bin-darwin
 
 FROM scratch AS bin-windows
 COPY --from=build /out/proxy /proxy.exe
-COPY --from=build /eventlistener /eventlistener.exe
+COPY --from=build /out/eventlistener /eventlistener.exe
 
 FROM bin-${TARGETOS} AS bin
