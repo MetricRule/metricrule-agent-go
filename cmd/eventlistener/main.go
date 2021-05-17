@@ -21,6 +21,12 @@ import (
 	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
+// AgentPortKey is the key for the port where metrics will be exposed.
+const AgentPortKey = "AGENT_PORT"
+
+// AgentPortDefault is the default port where metrics will be exposed.
+const AgentPortDefault = "80"
+
 // MetricsPathKey is the key for the env variable to set the path that metrics will be served on.
 const MetricsPathKey = "METRICS_PATH"
 
@@ -151,6 +157,11 @@ func main() {
 	log.Fatal(c.StartReceiver(context.Background(), func(e cloudevents.Event) {
 		record(recordArgs{e, config, meter, ctxChans})
 	}))
+
+	agentPort := getEnv(AgentPortKey, AgentPortDefault)
+	if err := http.ListenAndServe(":"+agentPort, nil); err != nil {
+		glog.Error(err)
+	}
 
 	// When exiting from your process, call Stop for last collection cycle.
 	defer func() {
