@@ -1,17 +1,33 @@
 # 📏 MetricRule
 
-## TFServing Sidecar
+Easy open source monitoring for ML models.
 
 > A sidecar agent that creates metrics for monitoring Tensorflow Serving models.
 
-[![Continuous Integration](https://github.com/MetricRule/metricrule-sidecar-tfserving/actions/workflows/ci.yaml/badge.svg)](https://github.com/MetricRule/metricrule-sidecar-tfserving/actions/workflows/ci.yaml)
+[![Continuous Integration](https://github.com/MetricRule/metricrule-agent-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/MetricRule/metricrule-agent-go/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ----
 
-This is a sidecar agent that is designed to be deployed with a [Tensorflow Serving](https://github.com/tensorflow/serving) HTTP endpoint to generate input feature and output distribution metrics based on the model's endpoint usage.
+## Motivation
+
+MetricRule agents are designed to be deployed with a serving model endpoint to generate input feature and output distribution metrics based on the model's endpoint usage. Integrations with
+[Tensorflow Serving](https://github.com/tensorflow/serving) and [KFServing](https://github.com/kubeflow/kfserving) are supported.
 
 The motivation of this project is to make it easier to monitor feature distributions in production to better catch real world ML issues like training-serving skew, feature drifts, poor model performance on specific slices of input.
+
+### TFServing
+
+The recommended usage with TFServing is to deploy the agent as a sidecar with the model.
+
+The executable used is [cmd/proxy](cmd/proxy). The latest release is available at [Docker Hub](https://hub.docker.com/repository/docker/metricrule/metricrule-sidecar-tfserving/).
+
+### KFServing
+
+The recommended usage with KFServing is to use the agent as a logger sink.
+
+The executable used is [cmd/eventlistener](cmd/eventlistener). The latest release is available at
+[Docker Hub](https://hub.docker.com/repository/docker/metricrule/metricrule-kfserving/).
 
 ## Screenshots and Demo
 
@@ -33,13 +49,13 @@ Taken with a demo Grafana instance of this agent running with a toy [PetFinder](
 
 ## Get Started
 
-An image of the agent is maintained on [Docker Hub](https://hub.docker.com/repository/docker/metricrule/metricrule-sidecar-tfserving).
+Images of the agent are maintained on [Docker Hub](https://hub.docker.com/repository/docker/metricrule/).
 
-The agent should be deployed as a reverse proxy sidecar to your serving deployment. It takes as input a configuration to define what metrics to create based on input and output JSONs. Based on this, the agent provides a HTTP endpoint (by default `/metrics`) with metric aggregates.
+The agent takes as input a configuration to define what metrics to create based on input and output JSONs. Based on this, the agent provides a HTTP endpoint (by default `/metrics`) with metric aggregates.
 
 The expected usage is to use [Prometheus](https://github.com/prometheus/prometheus) to periodically scrape these endpoints. This can be then used as a data source for a [Grafana](https://github.com/grafana/grafana) dashboard for visualizations and alerts.
 
-End-to-end examples with [Kubernetes](https://kubernetes.io/) and [Docker Compose](https://docs.docker.com/compose/) are provided in the [example/](example) subdirectory.
+End-to-end examples with [Kubernetes](https://kubernetes.io/) and [Docker Compose](https://docs.docker.com/compose/) are provided in the [example/](example/tfserving) subdirectory.
 
 ## Configuration
 
@@ -68,7 +84,7 @@ Configuration is through environment variables. Some options of interest are:
 
 We ❤️ contributions. Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Please feel free to use the [Issue Tracker](https://github.com/MetricRule/metricrule-sidecar-tfserving/issues) and [GitHub Discussions](https://github.com/MetricRule/metricrule-sidecar-tfserving/discussions) to reach out to the maintainers.
+Please feel free to use the [Issue Tracker](https://github.com/MetricRule/metricrule-agent-go/issues) and [GitHub Discussions](https://github.com/MetricRule/metricrule-agent-go/discussions) to reach out to the maintainers.
 
 ## For more information
 
