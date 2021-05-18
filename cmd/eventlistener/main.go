@@ -25,7 +25,7 @@ import (
 const AgentPortKey = "AGENT_PORT"
 
 // AgentPortDefault is the default port where metrics will be exposed.
-const AgentPortDefault = "80"
+const AgentPortDefault = "8551"
 
 // MetricsPathKey is the key for the env variable to set the path that metrics will be served on.
 const MetricsPathKey = "METRICS_PATH"
@@ -75,8 +75,6 @@ func initOtel() (metric.Meter, *prometheus.Exporter) {
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	path := getEnv(MetricsPathKey, DefaultMetricsPath)
-	http.Handle(path, exporter)
 	return global.Meter("metricrule.sidecar.tfserving"), exporter
 }
 
@@ -154,14 +152,22 @@ func main() {
 	config := getRecordConfig(meter)
 	ctxChans := make(map[string](chan []attribute.KeyValue))
 
-	log.Fatal(c.StartReceiver(context.Background(), func(e cloudevents.Event) {
-		record(recordArgs{e, config, meter, ctxChans})
-	}))
-
 	agentPort := getEnv(AgentPortKey, AgentPortDefault)
-	if err := http.ListenAndServe(":"+agentPort, nil); err != nil {
-		glog.Error(err)
-	}
+	path := getEnv(MetricsPathKey, DefaultMetricsPath)
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle(path, exporter)
+
+	go func() {
+		if err := http.ListenAndServe(":"+agentPort, metricsMux); err != nil {
+			glog.Error(err)
+		}
+	}()
+
+	go func() {
+		log.Fatal(c.StartReceiver(context.Background(), func(e cloudevents.Event) {
+			record(recordArgs{e, config, meter, ctxChans})
+		}))
+	}()
 
 	// When exiting from your process, call Stop for last collection cycle.
 	defer func() {
@@ -170,4 +176,6 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	select {}
 }
