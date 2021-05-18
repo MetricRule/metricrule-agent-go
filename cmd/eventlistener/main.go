@@ -142,6 +142,7 @@ func main() {
 	// glog requires flag.Parse to be invoked before usage.
 	// See https://github.com/golang/glog/commit/65d674618f712aa808a7d0104131b9206fc3d5ad.
 	flag.Parse()
+	glog.Info("Metricrule agent initialized")
 
 	c, err := cloudevents.NewClientHTTP()
 	if err != nil {
@@ -154,6 +155,7 @@ func main() {
 
 	agentPort := getEnv(AgentPortKey, AgentPortDefault)
 	path := getEnv(MetricsPathKey, DefaultMetricsPath)
+	glog.Infof("Metrics will be served on :%v%v", agentPort, path)
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle(path, exporter)
 
