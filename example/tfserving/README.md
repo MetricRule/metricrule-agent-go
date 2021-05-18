@@ -1,4 +1,4 @@
-# E2E Example
+# TFServing Example
 
 This folder has Docker Compose and Kubernetes configurations to run the TFServing agent together with a TFServing model, Prometheus and Grafana.
 

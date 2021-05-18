@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: metricrule-agent
+  labels:
+    run: metricrule-agent
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: cloudevents
+      name: cloudevents
+    - protocol: TCP
+      port: 8551
+      targetPort: metrics
+      name: metrics
+  selector:
+    app: metricrule-agent
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metricrule-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metricrule-agent
+  template:
+    metadata:
+      labels:
+        app: metricrule-agent
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: iris-metrics-config
+          items:
+            - key: agent_config.textproto
+              path: agent_config.textproto
+      containers:
+      - name: metricrule-agent
+        image: metricrule/metricrule-kfserving:testing
+        imagePullPolicy: Always
+        env:
+        - name: AGENT_PORT
+          value: "8551"
+        - name: SIDECAR_CONFIG_PATH
+          value: "/config/agent_config.textproto"
+        volumeMounts:
+        - name: config
+          mountPath: "/config"
+          readOnly: true
+        ports:
+        - name: cloudevents 
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 8551
+          protocol: TCP
+---
+apiVersion: v1
+data:
+  agent_config.textproto: |-
+    input_metrics {
+      name: "input_distribution_counts"
+      simple_counter: {}
+    }
+    output_metrics {
+      name: "output_prediction_values"
+      value {
+        value {
+          parsed_value {
+            field_path: "predictions.0"
+            parsed_type: INTEGER
+          }
+        }  
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: iris-metrics-config
+  namespace: default 
