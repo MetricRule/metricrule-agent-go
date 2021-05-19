@@ -76,10 +76,12 @@ message ParsedValue {
     // The path from the root message (e.g request or response) to
     // retrieve the value.
     // This should be in JSONPath format.
-    // https://goessner.net/articles/JsonPath/
-    // e.g for json {f: {a: [1], b: 0}} to refer to 1, use `$.f.a[0]`.
-    // Please note that the path should point to a single JSON value
-    // (not an array or object).
+    // https://goessner.net/articles/JsonPath/.
+    // e.g for json {f: {a: [1], b: 0}} to refer to 1, use `".f.a[0]"`
+    // or `"$.f.a[0]"`.
+    // Only a single JSON path expression should be provided.
+    // The path should point to a single JSON value (not an array or 
+    // object) matching the specified parsed_type.
     string field_path = 1;
 
     // The type to parse the value as.
