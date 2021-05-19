@@ -75,13 +75,11 @@ message ValueConfig {
 message ParsedValue {
     // The path from the root message (e.g request or response) to
     // retrieve the value.
-    // For example,
-    //   "f.a"
-    // Refers to the field "a" nested in an object at field "f" in
-    // the top-level message.
-    // Numeric path indices can be used for repeated fields / arrays.
-    // For example,
-    //   "0.0"
+    // This should be in JSONPath format.
+    // https://goessner.net/articles/JsonPath/
+    // e.g for json {f: {a: [1], b: 0}} to refer to 1, use `$.f.a[0]`.
+    // Please note that the path should point to a single JSON value
+    // (not an array or object).
     string field_path = 1;
 
     // The type to parse the value as.
