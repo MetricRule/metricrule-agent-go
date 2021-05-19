@@ -41,7 +41,7 @@ spec:
               path: agent_config.textproto
       containers:
       - name: metricrule-agent
-        image: metricrule/metricrule-kfserving:testing
+        image: metricrule/metricrule-kfserving
         imagePullPolicy: Always
         env:
         - name: AGENT_PORT
