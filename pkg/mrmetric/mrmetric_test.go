@@ -1,4 +1,4 @@
-package tfmetric
+package mrmetric
 
 import (
 	"reflect"

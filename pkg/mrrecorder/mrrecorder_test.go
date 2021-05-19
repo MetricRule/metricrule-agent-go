@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
 type meterRecordCall struct {
@@ -68,7 +68,7 @@ func (f fakeMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyVa
 func TestRecordInputCounterNoLabels(t *testing.T) {
 	fakeMeter := fakeMeterImpl{}
 	fakeCounter := fakeInstrWrapper{}
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.CounterInstrumentKind,
 		MetricValueKind: reflect.Int64,
 		Name:            "simple",
@@ -88,7 +88,7 @@ func TestRecordInputCounterNoLabels(t *testing.T) {
 	logData := RequestLogData{
 		Dump:   requestData,
 		Config: &config,
-		Instrs: map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeCounter},
+		Instrs: map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeCounter},
 		Meter:  fakeMeter,
 	}
 	ctxChan := make(chan []attribute.KeyValue, 1)
@@ -99,7 +99,7 @@ func TestRecordInputCounterNoLabels(t *testing.T) {
 func TestOutputRecorderNoLabels(t *testing.T) {
 	fakeMeter := fakeMeterImpl{}
 	fakeRecorder := fakeInstrWrapper{}
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.ValueRecorderInstrumentKind,
 		MetricValueKind: reflect.Float64,
 		Name:            "prediction_recorder",
@@ -126,7 +126,7 @@ func TestOutputRecorderNoLabels(t *testing.T) {
 	logData := ResponseLogData{
 		Dump:   responseData,
 		Config: &config,
-		Instrs: map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeRecorder},
+		Instrs: map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeRecorder},
 		Meter:  fakeMeter,
 	}
 	ctxChan := make(chan []attribute.KeyValue, 1)

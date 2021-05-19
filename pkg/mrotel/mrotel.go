@@ -7,7 +7,7 @@ import (
 	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 )
 
 // InstrumentWrapper wraps around various types of opentelemetry instruments.
@@ -62,7 +62,7 @@ func (c noOpWrapper) Record(value interface{}) (metric.Measurement, error) {
 }
 
 // InitializeInstrument creates an instrument with the meter for the given spec.
-func InitializeInstrument(meter metric.Meter, spec tfmetric.MetricInstrumentSpec) InstrumentWrapper {
+func InitializeInstrument(meter metric.Meter, spec mrmetric.MetricInstrumentSpec) InstrumentWrapper {
 	switch spec.InstrumentKind {
 	case metric.CounterInstrumentKind:
 		switch spec.MetricValueKind {

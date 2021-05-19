@@ -8,8 +8,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
 type MetricRecorder interface {
@@ -25,7 +25,7 @@ type MetricRecorder interface {
 type RequestLogData struct {
 	Dump   []byte
 	Config *configpb.SidecarConfig
-	Instrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	Instrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter  MetricRecorder
 }
 
@@ -37,8 +37,8 @@ func LogRequestData(d RequestLogData, ctxChan chan<- []attribute.KeyValue) {
 	strdump := string(d.Dump)
 	i := strings.Index(strdump, "{")
 	j := strdump[i:]
-	ctxLabels := tfmetric.GetContextLabels(d.Config, j, tfmetric.InputContext)
-	metrics := tfmetric.GetMetricInstances(d.Config, j, tfmetric.InputContext)
+	ctxLabels := mrmetric.GetContextLabels(d.Config, j, mrmetric.InputContext)
+	metrics := mrmetric.GetMetricInstances(d.Config, j, mrmetric.InputContext)
 	ctx := context.Background()
 	for spec, m := range metrics {
 		instr := d.Instrs[spec]
@@ -55,7 +55,7 @@ func LogRequestData(d RequestLogData, ctxChan chan<- []attribute.KeyValue) {
 type ResponseLogData struct {
 	Dump   []byte
 	Config *configpb.SidecarConfig
-	Instrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	Instrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter  MetricRecorder
 }
 
@@ -64,7 +64,7 @@ func LogResponseData(d ResponseLogData, ctxChan <-chan []attribute.KeyValue) {
 	ctxLabels := <-ctxChan
 	strdump := string(d.Dump)
 	j := strdump[strings.Index(strdump, "{"):]
-	metrics := tfmetric.GetMetricInstances(d.Config, j, tfmetric.OutputContext)
+	metrics := mrmetric.GetMetricInstances(d.Config, j, mrmetric.OutputContext)
 	ctx := context.Background()
 	for spec, m := range metrics {
 		instr := d.Instrs[spec]

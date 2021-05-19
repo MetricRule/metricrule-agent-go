@@ -14,8 +14,8 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
 type meterRecordCall struct {
@@ -95,7 +95,7 @@ func TestRecordCounterNoLabels(t *testing.T) {
 	stubTransport := stubRoundTrip{}
 	fakeMeter := fakeMeterImpl{}
 	fakeCounter := fakeInstrWrapper{}
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.CounterInstrumentKind,
 		MetricValueKind: reflect.Int64,
 		Name:            "simple",
@@ -115,8 +115,8 @@ func TestRecordCounterNoLabels(t *testing.T) {
 	transport := Transport{
 		RoundTripper:  stubTransport,
 		SidecarConfig: &config,
-		InInstrs:      map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeCounter},
-		OutInstrs:     map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{},
+		InInstrs:      map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeCounter},
+		OutInstrs:     map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{},
 		Meter:         fakeMeter,
 	}
 
@@ -135,12 +135,12 @@ func TestRecordContextLabelsAppliedForInputAndOutput(t *testing.T) {
 	fakeMeter := fakeMeterImpl{}
 	fakeCounter := fakeInstrWrapper{}
 	fakeRecorder := fakeInstrWrapper{}
-	inputSpec := tfmetric.MetricInstrumentSpec{
+	inputSpec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.CounterInstrumentKind,
 		MetricValueKind: reflect.Int64,
 		Name:            "simple",
 	}
-	outputSpec := tfmetric.MetricInstrumentSpec{
+	outputSpec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.ValueRecorderInstrumentKind,
 		MetricValueKind: reflect.Float64,
 		Name:            "prediction_recorder",
@@ -189,8 +189,8 @@ func TestRecordContextLabelsAppliedForInputAndOutput(t *testing.T) {
 	transport := Transport{
 		RoundTripper:  stubTransport,
 		SidecarConfig: &config,
-		InInstrs:      map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{inputSpec: fakeCounter},
-		OutInstrs:     map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{outputSpec: fakeRecorder},
+		InInstrs:      map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{inputSpec: fakeCounter},
+		OutInstrs:     map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{outputSpec: fakeRecorder},
 		Meter:         fakeMeter,
 	}
 

@@ -16,9 +16,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrrecorder"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
 )
 
 // AgentPortKey is the key for the port where metrics will be exposed.
@@ -80,22 +80,22 @@ func initOtel() (metric.Meter, *prometheus.Exporter) {
 
 type recordConfig struct {
 	config    *configpb.SidecarConfig
-	inInstrs  map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
-	outInstrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	inInstrs  map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	outInstrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 }
 
 func getRecordConfig(meter metric.Meter) recordConfig {
 	config := loadSidecarConfig()
-	specs := tfmetric.GetInstrumentSpecs(config)
-	inputSpecs := specs[tfmetric.InputContext]
-	outputSpecs := specs[tfmetric.OutputContext]
+	specs := mrmetric.GetInstrumentSpecs(config)
+	inputSpecs := specs[mrmetric.InputContext]
+	outputSpecs := specs[mrmetric.OutputContext]
 
-	inputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	inputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range inputSpecs {
 		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
 
-	outputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	outputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range outputSpecs {
 		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
