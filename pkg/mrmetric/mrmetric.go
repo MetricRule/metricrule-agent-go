@@ -1,15 +1,17 @@
 package mrmetric
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
 	"strconv"
-	"strings"
 
+	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"k8s.io/client-go/util/jsonpath"
 
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
 )
@@ -227,23 +229,32 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 
 func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interface{} {
 	if config.GetParsedValue() != nil {
-		path := config.GetParsedValue().FieldPath
-		segments := strings.Split(path, ".")
 		vType := config.GetParsedValue().ParsedType
+		j := jsonpath.New("value_extractor")
+		j.AllowMissingKeys(true)
+		j.EnableJSONOutput(true)
 
-		p := jsonPayload
-		for _, segment := range segments {
-			if listP, ok := p.([]interface{}); ok {
-				i, err := strconv.Atoi(segment)
-				if err == nil && i < len(listP) {
-					p = listP[i]
-				} else {
-					log.Fatalf("Error parsing JSON, unable to apply path segment %v for list", segment)
-				}
-			} else if mapP, ok := p.(map[string]interface{}); ok {
-				p = mapP[segment]
-			}
+		err := j.Parse(fmt.Sprintf("{ %v }", config.ParsedValue.FieldPath))
+		if err != nil {
+			glog.Errorf("Unable to parse jsonPath %v\n.Err: %v", config.ParsedValue.FieldPath, err)
+			return defaultValueForType(vType)
 		}
+
+		buf := new(bytes.Buffer)
+		err = j.Execute(buf, jsonPayload)
+		if err != nil {
+			glog.Error("Unable to find results in JSON payload\n", err)
+			return defaultValueForType(vType)
+		}
+		var extracted []interface{}
+		err = json.Unmarshal(buf.Bytes(), &extracted)
+		if err != nil {
+			glog.Error("Unable to unmarshal jsonpath output\n", err)
+			return defaultValueForType(vType)
+		}
+
+		// TODO(jishnu): Handle multiple values as result of jsonpath.
+		p := extracted[0]
 		switch valueP := p.(type) {
 		case string:
 			switch vType {
@@ -273,14 +284,7 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 			}
 		default:
 			log.Printf("Unexpected field when parsing JSON payload. Value %v, Config %v", p, config)
-			switch vType {
-			case configpb.ParsedValue_FLOAT:
-				return 0.0
-			case configpb.ParsedValue_INTEGER:
-				return 0
-			case configpb.ParsedValue_STRING:
-				return ""
-			}
+			return defaultValueForType(vType)
 		}
 	}
 
@@ -296,5 +300,17 @@ func extractValue(config *configpb.ValueConfig, jsonPayload interface{}) interfa
 		}
 	}
 
+	return nil
+}
+
+func defaultValueForType(t configpb.ParsedValue_ParsedType) interface{} {
+	switch t {
+	case configpb.ParsedValue_FLOAT:
+		return float64(0)
+	case configpb.ParsedValue_STRING:
+		return ""
+	case configpb.ParsedValue_INTEGER:
+		return int64(0)
+	}
 	return nil
 }

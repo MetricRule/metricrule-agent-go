@@ -180,7 +180,7 @@ func TestOutputValuesMetrics(t *testing.T) {
 			value {
 				value {
 					parsed_value {
-						field_path: "prediction"
+						field_path: "$.prediction"
 						parsed_type: FLOAT
 					}
 				}
@@ -239,7 +239,7 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 			value {
 				value {
 					parsed_value {
-						field_path: "prediction.0.0"
+						field_path: ".prediction[0][0]"
 						parsed_type: FLOAT
 					}
 				}
@@ -301,7 +301,7 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 				label_key { string_value: "PetType" }
 				label_value {
 					parsed_value {
-						field_path: "instances.0.Type.0"
+						field_path: ".instances[0].Type[0]"
 						parsed_type: STRING
 					}
 				}
@@ -310,7 +310,7 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 				label_key { string_value: "Breed" }
 				label_value {
 					parsed_value {
-						field_path: "instances.0.Breed1.0"
+						field_path: ".instances[0].Breed1[0]"
 						parsed_type: STRING
 					}
 				}
@@ -408,7 +408,7 @@ func TestGetInputContextLabels(t *testing.T) {
 			label_key { string_value: "PetType" }
 			label_value {
 				parsed_value {
-					field_path: "Type"
+					field_path: ".Type"
 					parsed_type: STRING
 				}
 			}
@@ -417,7 +417,7 @@ func TestGetInputContextLabels(t *testing.T) {
 			label_key { string_value: "Breed" }
 			label_value {
 				parsed_value {
-					field_path: "Breed"
+					field_path: ".Breed"
 					parsed_type: STRING
 				}
 			}

@@ -19,4 +19,5 @@ require (
 	golang.org/x/tools v0.1.1 // indirect
 	google.golang.org/protobuf v1.26.0
 	honnef.co/go/tools v0.1.4 // indirect
+	k8s.io/client-go v0.21.1
 )

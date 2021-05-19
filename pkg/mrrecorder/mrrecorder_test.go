@@ -110,7 +110,7 @@ func TestOutputRecorderNoLabels(t *testing.T) {
 			value {
 				value {
 					parsed_value {
-						field_path: "prediction"
+						field_path: ".prediction"
 						parsed_type: FLOAT
 					}
 				}
