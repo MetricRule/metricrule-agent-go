@@ -82,6 +82,7 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 func GetMetricInstances(config *configpb.SidecarConfig,
 	payload string,
 	context MetricContext) map[MetricInstrumentSpec][]MetricInstance {
+
 	configs := []*configpb.MetricConfig{}
 	filter := ""
 	if context == InputContext {
@@ -126,25 +127,35 @@ func GetMetricInstances(config *configpb.SidecarConfig,
 // This is currently only supported for InputContext.
 func GetContextLabels(config *configpb.SidecarConfig, payload string, context MetricContext) []attribute.KeyValue {
 	configs := []*configpb.LabelConfig{}
+	filter := ""
 	if context == InputContext {
 		configs = config.ContextLabelsFromInput
+		filter = config.InputContentFilter
 	}
 	if context == OutputContext {
 		return []attribute.KeyValue{}
 	}
 
+	payloads := []interface{}{}
 	var jsonObj interface{}
 	err := json.Unmarshal([]byte(payload), &jsonObj)
 	if err != nil {
 		log.Fatal("Error when umarshaling payload json", err)
 	}
+	if len(filter) > 0 {
+		payloads = append(payloads, getFilteredValues(filter, jsonObj)...)
+	} else {
+		payloads = append(payloads, jsonObj)
+	}
 
 	var ls []attribute.KeyValue
 	for _, lconf := range configs {
-		lls := getLabelsForLabelConf(lconf, jsonObj)
-		for _, l := range lls {
-			if l.Valid() {
-				ls = append(ls, l)
+		for _, p := range payloads {
+			lls := getLabelsForLabelConf(lconf, p)
+			for _, l := range lls {
+				if l.Valid() {
+					ls = append(ls, l)
+				}
 			}
 		}
 	}

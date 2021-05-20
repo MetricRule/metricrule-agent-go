@@ -746,3 +746,204 @@ func TestMultipleMetricsWithFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestGetInputContextLabelsWithFilter(t *testing.T) {
+	configTextProto := `
+		input_content_filter: ".instances[*]"
+		context_labels_from_input {
+			label_key { string_value: "PetType" }
+			label_value {
+				parsed_value {
+					field_path: ".Type[0]"
+					parsed_type: STRING
+				}
+			}
+		}
+		context_labels_from_input {
+			label_key { string_value: "Breed" }
+			label_value {
+				parsed_value {
+					field_path: ".Breed1[0]"
+					parsed_type: STRING
+				}
+			}
+		}
+		`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	request := `{
+		"instances": [
+			{
+				"Type": [
+					"Cat"
+				],
+				"Age": [
+					4
+				],
+				"Breed1": [
+					"Turkish"
+				]
+			}
+		]
+	}`
+	labels := GetContextLabels(&config, request, InputContext)
+
+	gotLen := len(labels)
+	wantLen := 2
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of labels, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	got1Label := labels[0]
+	want1LabelKey := "PetType"
+	want1LabelValue := "Cat"
+	if string(got1Label.Key) != want1LabelKey {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Key, want1LabelKey)
+	}
+	if got1Label.Value.AsString() != want1LabelValue {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Value.AsString(), want1LabelValue)
+	}
+
+	got2Label := labels[1]
+	want2LabelKey := "Breed"
+	want2LabelValue := "Turkish"
+	if string(got2Label.Key) != want2LabelKey {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Key, want2LabelKey)
+	}
+	if got2Label.Value.AsString() != want2LabelValue {
+		t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+	}
+}
+
+func TestOutputValueWithFilterMetrics(t *testing.T) {
+	configTextProto := `
+		output_content_filter: ".predictions[*]"
+		output_metrics {
+			value {
+				value {
+					parsed_value {
+						field_path: "[0]"
+						parsed_type: FLOAT
+					}
+				}
+			}
+		}`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	metrics := GetMetricInstances(&config, "{ \"predictions\": [[0.495]] }", OutputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	for spec, instances := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.ValueRecorderInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Float64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
+		gotValue := instance.MetricValues[0]
+		wantValue := 0.495
+		if gotValue != wantValue {
+			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+		}
+
+		gotLabelsLen := len(instance.Labels)
+		wantLabelsLen := 0
+		if gotLabelsLen != wantLabelsLen {
+			t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+		}
+	}
+}
+
+func TestInputCounterMultipleFilterMetrics(t *testing.T) {
+	configTextProto := `
+		input_content_filter: ".instances[*]"
+		input_metrics {
+			simple_counter: {}
+		}`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	metrics := GetMetricInstances(&config, "{\"instances\": [{}, {}]}", InputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	for spec, instances := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.CounterInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected instrument kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Int64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 2
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		for _, instance := range instances {
+			gotValue := instance.MetricValues[0]
+			wantValue := int64(1)
+			if gotValue != wantValue {
+				t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+			}
+
+			gotLabelsLen := len(instance.Labels)
+			wantLabelsLen := 0
+			if gotLabelsLen != wantLabelsLen {
+				t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+			}
+		}
+	}
+}
