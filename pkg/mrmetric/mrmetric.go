@@ -79,27 +79,44 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 }
 
 // GetMetricInstances returns a map of metric specifications to the instances to record.
-func GetMetricInstances(config *configpb.SidecarConfig, payload string, context MetricContext) map[MetricInstrumentSpec]MetricInstance {
+func GetMetricInstances(config *configpb.SidecarConfig,
+	payload string,
+	context MetricContext) map[MetricInstrumentSpec][]MetricInstance {
 	configs := []*configpb.MetricConfig{}
+	filter := ""
 	if context == InputContext {
 		configs = config.InputMetrics
+		filter = config.InputContentFilter
 	}
 	if context == OutputContext {
 		configs = config.OutputMetrics
+		filter = config.OutputContentFilter
 	}
 
+	payloads := []interface{}{}
 	var jsonObj interface{}
 	err := json.Unmarshal([]byte(payload), &jsonObj)
 	if err != nil {
 		log.Fatal("Error when umarshaling payload json", err)
 	}
+	if len(filter) > 0 {
+		payloads = append(payloads, getFilteredValues(filter, jsonObj)...)
+	} else {
+		payloads = append(payloads, jsonObj)
+	}
 
-	output := make(map[MetricInstrumentSpec]MetricInstance)
+	output := make(map[MetricInstrumentSpec][]MetricInstance)
 	for _, config := range configs {
-		v := getMetricValues(config, jsonObj)
-		l := getMetricLabels(config, jsonObj)
-		s := getInstrumentSpec(config)
-		output[s] = MetricInstance{v, l}
+		for _, p := range payloads {
+			v := getMetricValues(config, p)
+			l := getMetricLabels(config, p)
+			s := getInstrumentSpec(config)
+			if m, ok := output[s]; ok {
+				output[s] = append(m, MetricInstance{v, l})
+			} else {
+				output[s] = []MetricInstance{{v, l}}
+			}
+		}
 	}
 
 	return output
@@ -245,6 +262,35 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 	}
 
 	return reflect.Invalid
+}
+
+func getFilteredValues(filter string, jsonPayload interface{}) []interface{} {
+	j := jsonpath.New("payload_filterer")
+	j.AllowMissingKeys(true)
+	j.EnableJSONOutput(true)
+
+	err := j.Parse(fmt.Sprintf("{ %v }", filter))
+	if err != nil {
+		glog.Errorf("Unable to create filter %v.\n%v", filter, err)
+		return []interface{}{jsonPayload}
+	}
+
+	buf := new(bytes.Buffer)
+	err = j.Execute(buf, jsonPayload)
+	result := buf.String()
+	fmt.Println(result)
+	if err != nil {
+		glog.Errorf("Error applying filter %v on payload.\n%v", filter, err)
+		return []interface{}{jsonPayload}
+	}
+	var extracted []interface{}
+	err = json.Unmarshal(buf.Bytes(), &extracted)
+	if err != nil {
+		glog.Error("Unable to unmarshal jsonpath output\n", err)
+		return []interface{}{jsonPayload}
+	}
+
+	return extracted
 }
 
 func extractValues(config *configpb.ValueConfig, jsonPayload interface{}) []interface{} {

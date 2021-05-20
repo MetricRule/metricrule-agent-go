@@ -73,7 +73,7 @@ func TestInputCounterMetrics(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -90,6 +90,13 @@ func TestInputCounterMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
@@ -129,7 +136,7 @@ func TestInputCounterWithLabels(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -146,6 +153,13 @@ func TestInputCounterWithLabels(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
@@ -202,7 +216,7 @@ func TestOutputValuesMetrics(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -219,6 +233,13 @@ func TestOutputValuesMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := 0.495
 		if gotValue != wantValue {
@@ -261,7 +282,7 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -278,6 +299,13 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := 0.495
 		if gotValue != wantValue {
@@ -347,7 +375,7 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -364,6 +392,13 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
@@ -506,7 +541,7 @@ func TestGetMultipleLabelsWithWildcard(t *testing.T) {
 	}
 
 	counter := 0
-	for spec, instance := range metrics {
+	for spec, instances := range metrics {
 		if counter >= wantLen {
 			t.Errorf("Exceeded expected iteration length: %v", wantLen)
 		}
@@ -523,6 +558,13 @@ func TestGetMultipleLabelsWithWildcard(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 1
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		instance := instances[0]
 		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
@@ -567,6 +609,140 @@ func TestGetMultipleLabelsWithWildcard(t *testing.T) {
 		}
 		if got3Label.Value.AsString() != want3LabelValue {
 			t.Errorf("Unexpected label key, got %v, wanted %v", got3Label.Value.AsString(), want3LabelValue)
+		}
+	}
+}
+
+func TestMultipleMetricsWithFilter(t *testing.T) {
+	configTextProto := `
+		input_content_filter: ".instances[*]"
+		input_metrics {
+			name: "input_distribution_counts"
+			simple_counter {}
+			labels {
+				label_key { string_value: "PetType" }
+				label_value {
+					parsed_value {
+						field_path: ".Type[0]"
+						parsed_type: STRING
+					}
+				}
+			}
+			labels {
+				label_key { string_value: "Breed" }
+				label_value {
+					parsed_value {
+						field_path: ".Breed1[0]"
+						parsed_type: STRING
+					}
+				}
+			}
+		}`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	response := `{
+		"instances": [
+			{
+				"Type": [
+					"Cat"
+				],
+				"Age": [
+					4
+				],
+				"Breed1": [
+					"Turkish"
+				]
+			},
+			{
+				"Type": [
+					"Dog"
+				],
+				"Age": [
+					2
+				],
+				"Breed1": [
+					"Labrador"
+				]
+			}
+		]
+	}`
+	metrics := GetMetricInstances(&config, response, InputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	labelValues := map[string][]string{
+		"PetType": {"Cat", "Dog"},
+		"Breed":   {"Turkish", "Labrador"},
+	}
+	for spec, instances := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.CounterInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Int64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotInstanceLen := len(instances)
+		wantInstanceLen := 2
+		if gotInstanceLen != wantInstanceLen {
+			t.Errorf("Unexpected number of instances, got %v, wanted %v", gotInstanceLen, wantInstanceLen)
+		}
+
+		for ictr, instance := range instances {
+			gotValue := instance.MetricValues[0]
+			wantValue := int64(1)
+			if gotValue != wantValue {
+				t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+			}
+
+			gotLabelsLen := len(instance.Labels)
+			wantLabelsLen := 2
+			if gotLabelsLen != wantLabelsLen {
+				t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+			}
+
+			if gotLabelsLen == 0 {
+				return
+			}
+
+			got1Label := instance.Labels[0]
+			want1LabelKey := "PetType"
+			want1LabelValue := labelValues[want1LabelKey][ictr]
+			if string(got1Label.Key) != want1LabelKey {
+				t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Key, want1LabelKey)
+			}
+			if got1Label.Value.AsString() != want1LabelValue {
+				t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Value.AsString(), want1LabelValue)
+			}
+
+			got2Label := instance.Labels[1]
+			want2LabelKey := "Breed"
+			want2LabelValue := labelValues[want2LabelKey][ictr]
+			if string(got2Label.Key) != want2LabelKey {
+				t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Key, want2LabelKey)
+			}
+			if got2Label.Value.AsString() != want2LabelValue {
+				t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+			}
 		}
 	}
 }

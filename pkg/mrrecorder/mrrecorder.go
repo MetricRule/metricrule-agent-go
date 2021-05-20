@@ -41,18 +41,20 @@ func LogRequestData(d RequestLogData, ctxChan chan<- []attribute.KeyValue) {
 	ctxLabels := mrmetric.GetContextLabels(d.Config, j, mrmetric.InputContext)
 	metrics := mrmetric.GetMetricInstances(d.Config, j, mrmetric.InputContext)
 	ctx := context.Background()
-	for spec, m := range metrics {
+	for spec, ms := range metrics {
 		instr := d.Instrs[spec]
-		vs := []metric.Measurement{}
-		for _, val := range m.MetricValues {
-			v, err := instr.Record(val)
-			if err != nil {
-				glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
-			} else {
-				vs = append(vs, v)
+		for _, m := range ms {
+			vs := []metric.Measurement{}
+			for _, val := range m.MetricValues {
+				v, err := instr.Record(val)
+				if err != nil {
+					glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
+				} else {
+					vs = append(vs, v)
+				}
 			}
+			d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 		}
-		d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 	}
 	ctxChan <- ctxLabels
 }
@@ -73,17 +75,19 @@ func LogResponseData(d ResponseLogData, ctxChan <-chan []attribute.KeyValue) {
 	j := strdump[strings.Index(strdump, "{"):]
 	metrics := mrmetric.GetMetricInstances(d.Config, j, mrmetric.OutputContext)
 	ctx := context.Background()
-	for spec, m := range metrics {
+	for spec, ms := range metrics {
 		instr := d.Instrs[spec]
-		vs := []metric.Measurement{}
-		for _, val := range m.MetricValues {
-			v, err := instr.Record(val)
-			if err != nil {
-				glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
-			} else {
-				vs = append(vs, v)
+		for _, m := range ms {
+			vs := []metric.Measurement{}
+			for _, val := range m.MetricValues {
+				v, err := instr.Record(val)
+				if err != nil {
+					glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
+				} else {
+					vs = append(vs, v)
+				}
 			}
+			d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 		}
-		d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 	}
 }

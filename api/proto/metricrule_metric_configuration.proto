@@ -25,7 +25,7 @@ message SidecarConfig {
     // All metric paths (e.g ParsedValue.field_path) will be evaluated relative 
     // to the result of the filter.
     // This can also be used to 'split' batch inputs. For example, for KFServing
-    // use ".instances" for each instance to be evaluated independently.
+    // use ".instances[*]" for each instance to be evaluated independently.
     string input_content_filter = 4;
 
     // Configuration to filter received output payload before processing metrics.
@@ -34,7 +34,7 @@ message SidecarConfig {
     // All metric paths (e.g ParsedValue.field_path) will be evaluated relative 
     // to the result of the filter.
     // This can also be used to 'split' batch outputs. For example, for KFServing
-    // use ".predictions" for each instance to be evaluated independently.
+    // use ".predictions[*]" for each prediction to be evaluated independently.
     string output_content_filter = 5;
 }
 
