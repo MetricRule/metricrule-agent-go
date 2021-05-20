@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
+	"github.com/golang/glog"
 	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
 	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
@@ -42,10 +43,16 @@ func LogRequestData(d RequestLogData, ctxChan chan<- []attribute.KeyValue) {
 	ctx := context.Background()
 	for spec, m := range metrics {
 		instr := d.Instrs[spec]
-		v, err := instr.Record(m.MetricValue)
-		if err == nil {
-			d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
+		vs := []metric.Measurement{}
+		for _, val := range m.MetricValues {
+			v, err := instr.Record(val)
+			if err != nil {
+				glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
+			} else {
+				vs = append(vs, v)
+			}
 		}
+		d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 	}
 	ctxChan <- ctxLabels
 }
@@ -68,9 +75,15 @@ func LogResponseData(d ResponseLogData, ctxChan <-chan []attribute.KeyValue) {
 	ctx := context.Background()
 	for spec, m := range metrics {
 		instr := d.Instrs[spec]
-		v, err := instr.Record(m.MetricValue)
-		if err == nil {
-			d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), v)
+		vs := []metric.Measurement{}
+		for _, val := range m.MetricValues {
+			v, err := instr.Record(val)
+			if err != nil {
+				glog.Errorf("Error recording metric for spec %v:\n%v", spec.Name, err)
+			} else {
+				vs = append(vs, v)
+			}
 		}
+		d.Meter.RecordBatch(ctx, append(ctxLabels, m.Labels...), vs...)
 	}
 }

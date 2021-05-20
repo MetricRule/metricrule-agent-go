@@ -90,7 +90,7 @@ func TestInputCounterMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
-		gotValue := instance.MetricValue
+		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
 			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
@@ -146,7 +146,7 @@ func TestInputCounterWithLabels(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
-		gotValue := instance.MetricValue
+		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
 			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
@@ -219,7 +219,7 @@ func TestOutputValuesMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
-		gotValue := instance.MetricValue
+		gotValue := instance.MetricValues[0]
 		wantValue := 0.495
 		if gotValue != wantValue {
 			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
@@ -278,7 +278,7 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
-		gotValue := instance.MetricValue
+		gotValue := instance.MetricValues[0]
 		wantValue := 0.495
 		if gotValue != wantValue {
 			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
@@ -364,7 +364,7 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
 		}
 
-		gotValue := instance.MetricValue
+		gotValue := instance.MetricValues[0]
 		wantValue := int64(1)
 		if gotValue != wantValue {
 			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
@@ -460,5 +460,113 @@ func TestGetInputContextLabels(t *testing.T) {
 	}
 	if got2Label.Value.AsString() != want2LabelValue {
 		t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+	}
+}
+
+func TestGetMultipleLabelsWithWildcard(t *testing.T) {
+	configTextProto := `
+		input_metrics {
+			name: "input_distribution_counts"
+			simple_counter {}
+			labels {
+				label_key { 
+					string_value: "Tag"
+				}
+				label_value {
+					parsed_value {
+						field_path: ".instances[0].Tags[*]"
+						parsed_type: STRING
+					}
+				}
+			}
+		}`
+	var config configpb.SidecarConfig
+	_ = prototext.Unmarshal([]byte(configTextProto), &config)
+
+	request := `{
+		"instances": [
+			{
+				"Data": {},
+				"Tags": [
+					"Wellness", "Organic", "Ethical"
+				]
+			}
+		]
+	}`
+	metrics := GetMetricInstances(&config, request, InputContext)
+
+	gotLen := len(metrics)
+	wantLen := 1
+	if gotLen != wantLen {
+		t.Errorf("Unexpected length of metrics, got %v, wanted %v", gotLen, wantLen)
+	}
+
+	if gotLen == 0 {
+		return
+	}
+
+	counter := 0
+	for spec, instance := range metrics {
+		if counter >= wantLen {
+			t.Errorf("Exceeded expected iteration length: %v", wantLen)
+		}
+
+		gotInstrumentKind := spec.InstrumentKind
+		wantInstrumentKind := metric.CounterInstrumentKind
+		if gotInstrumentKind != wantInstrumentKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotInstrumentKind, wantInstrumentKind)
+		}
+
+		gotMetricKind := spec.MetricValueKind
+		wantMetricKind := reflect.Int64
+		if gotMetricKind != wantMetricKind {
+			t.Errorf("Unexpected metric kind, got %v, wanted %v", gotMetricKind, wantMetricKind)
+		}
+
+		gotValue := instance.MetricValues[0]
+		wantValue := int64(1)
+		if gotValue != wantValue {
+			t.Errorf("Unexpected metric value, got %v, wanted %v", gotValue, wantValue)
+		}
+
+		gotLabelsLen := len(instance.Labels)
+		wantLabelsLen := 3
+		if gotLabelsLen != wantLabelsLen {
+			t.Errorf("Unexpected labels length, got %v, wanted %v", gotLabelsLen, wantLabelsLen)
+		}
+
+		if gotLabelsLen == 0 {
+			return
+		}
+
+		got1Label := instance.Labels[0]
+		want1LabelKey := "Tag"
+		want1LabelValue := "Wellness"
+		if string(got1Label.Key) != want1LabelKey {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Key, want1LabelKey)
+		}
+		if got1Label.Value.AsString() != want1LabelValue {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got1Label.Value.AsString(), want1LabelValue)
+		}
+
+		got2Label := instance.Labels[1]
+		want2LabelKey := "Tag"
+		want2LabelValue := "Organic"
+		if string(got2Label.Key) != want2LabelKey {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Key, want2LabelKey)
+		}
+		if got2Label.Value.AsString() != want2LabelValue {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got2Label.Value.AsString(), want2LabelValue)
+		}
+
+		got3Label := instance.Labels[2]
+		want3LabelKey := "Tag"
+		want3LabelValue := "Ethical"
+		if string(got3Label.Key) != want3LabelKey {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got3Label.Key, want3LabelKey)
+		}
+		if got3Label.Value.AsString() != want3LabelValue {
+			t.Errorf("Unexpected label key, got %v, wanted %v", got3Label.Value.AsString(), want3LabelValue)
+		}
 	}
 }
