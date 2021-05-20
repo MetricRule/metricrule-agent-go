@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 
 RUN protoc -I=api/proto --go_out=api/proto \
-      --go_opt=module=github.com/metricrule-sidecar-tfserving/api/proto \
+      --go_opt=module=github.com/metricrule-agent-go/api/proto \
       api/proto/metricrule_metric_configuration.proto
 
 FROM base AS build

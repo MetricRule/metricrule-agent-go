@@ -7,7 +7,7 @@ import (
 	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
 )
 
 // InstrumentWrapper wraps around various types of opentelemetry instruments.

@@ -15,10 +15,10 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrrecorder"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
+	"github.com/metricrule-agent-go/pkg/mrrecorder"
 )
 
 // AgentPortKey is the key for the port where metrics will be exposed.

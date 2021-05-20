@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"k8s.io/client-go/util/jsonpath"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
 )
 
 // MetricInstrumentSpec specifies an instrument to record a metric.

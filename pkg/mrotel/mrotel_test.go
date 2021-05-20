@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
 )
 
 func TestInitializeIntCounterAndRecord(t *testing.T) {

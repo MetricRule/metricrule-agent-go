@@ -15,10 +15,10 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrtransport"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
+	"github.com/metricrule-agent-go/pkg/mrtransport"
 )
 
 // ApplicationHostKey is the address where the

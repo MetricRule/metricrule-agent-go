@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
 )
 
 func TestInputCounterInstrumentSpec(t *testing.T) {

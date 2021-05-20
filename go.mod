@@ -1,4 +1,4 @@
-module github.com/metricrule-sidecar-tfserving
+module github.com/metricrule-agent-go
 
 go 1.16
 

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package metricrule.sidecar.tfserving.api;
+package metricrule.agent.go.api;
 
-option go_package = "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb";
+option go_package = "github.com/metricrule-agent-go/api/proto/metricconfigpb";
 
 message SidecarConfig {    
     // Configuration for the data from the input tensor to record as metrics.

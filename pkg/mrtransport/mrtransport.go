@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrrecorder"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
+	"github.com/metricrule-agent-go/pkg/mrrecorder"
 )
 
 // MetricRecorder is an interface that is able to record a measurement with labels.

@@ -8,9 +8,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/golang/glog"
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrmetric"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
 )
 
 type MetricRecorder interface {

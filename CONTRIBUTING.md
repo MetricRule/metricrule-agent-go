@@ -40,9 +40,9 @@ To use this for testing local modifications, build a Docker image locally with
 some tag.
 
 ```bash
-DOCKER_BUILDKIT=1 docker build . --target bin -t metricrule-tfserving-local-feature-xyz
+DOCKER_BUILDKIT=1 docker build . --target bin -t metricrule-agent-local-feature-xyz
 ```
 
-Change the Docker Compose template's metricrule image to `metricrule-tfserving-local-feature-xyz`
+Change the Docker Compose template's metricrule image to `metricrule-agent-local-feature-xyz`
 
 Run with `docker-compose up`.
