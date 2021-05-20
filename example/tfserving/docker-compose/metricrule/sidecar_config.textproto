@@ -1,6 +1,7 @@
 # proto-file: api/proto/metricrule_metric_configuration.proto
 # proto-message: SidecarConfig
 
+input_content_filter: ".instances[*]"
 input_metrics {
     name: "input_distribution_counts"
     simple_counter {}
@@ -8,18 +9,19 @@ input_metrics {
         label_key { string_value: "Breed" }
         label_value {
             parsed_value {
-                field_path: "instances.0.Breed1.0"
+                field_path: ".Breed1[0]"
                 parsed_type: STRING
             }
         }
     }
 }
+output_content_filter: ".predictions[*]"
 output_metrics {
     name: "output_prediction_value_logits"
     value {
         value {
             parsed_value {
-                field_path: "predictions.0.0"
+                field_path: "[0]"
                 parsed_type: FLOAT
             }
         }
@@ -29,7 +31,7 @@ context_labels_from_input {
     label_key { string_value: "PetType" }
     label_value {
         parsed_value {
-            field_path: "instances.0.Type.0"
+            field_path: ".Type[0]"
             parsed_type: STRING
         }
     }

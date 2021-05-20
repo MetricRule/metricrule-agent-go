@@ -67,13 +67,14 @@ data:
       name: "input_distribution_counts"
       simple_counter: {}
     }
+    output_content_filter: ".predictions[*]"
     output_metrics {
       name: "output_prediction_values"
       value {
         value {
           parsed_value {
-            field_path: "predictions.0"
-            parsed_type: INTEGER
+            field_path: "*"
+            parsed_type: FLOAT
           }
         }  
       }
