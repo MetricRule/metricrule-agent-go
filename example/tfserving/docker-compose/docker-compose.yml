@@ -35,7 +35,7 @@ services:
        - grafana
 
   metricrule:
-    image: metricrule-agent-using-jsonpath
+    image: metricrule/metricrule-sidecar-tfserving
     ports:
        - 8551:8551
     environment:
