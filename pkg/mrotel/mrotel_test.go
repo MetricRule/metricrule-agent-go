@@ -7,11 +7,11 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
 )
 
 func TestInitializeIntCounterAndRecord(t *testing.T) {
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.CounterInstrumentKind,
 		MetricValueKind: reflect.Int64,
 		Name:            "TestIntCounter",
@@ -30,7 +30,7 @@ func TestInitializeIntCounterAndRecord(t *testing.T) {
 }
 
 func TestInitializeFloatValueRecorderAndRecord(t *testing.T) {
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.ValueRecorderInstrumentKind,
 		MetricValueKind: reflect.Float64,
 		Name:            "TestFloatCounter",
@@ -49,7 +49,7 @@ func TestInitializeFloatValueRecorderAndRecord(t *testing.T) {
 }
 
 func TestIntRecorderFailsToRecordFloat(t *testing.T) {
-	spec := tfmetric.MetricInstrumentSpec{
+	spec := mrmetric.MetricInstrumentSpec{
 		InstrumentKind:  metric.ValueRecorderInstrumentKind,
 		MetricValueKind: reflect.Int64,
 		Name:            "TestErrorIntCounter",

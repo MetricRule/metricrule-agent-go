@@ -6,6 +6,7 @@ networks:
 services:
   prometheus:
     image: prom/prometheus:v2.21.0
+    user: root
     volumes:
       - ./prometheus/:/etc/prometheus/
       - ./prometheus_data/:/prometheus
@@ -34,7 +35,7 @@ services:
        - grafana
 
   metricrule:
-    image: metricrule/metricrule-sidecar-tfserving:latest
+    image: metricrule/metricrule-sidecar-tfserving
     ports:
        - 8551:8551
     environment:

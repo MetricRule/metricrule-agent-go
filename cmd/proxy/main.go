@@ -15,10 +15,10 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrtransport"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
+	"github.com/metricrule-agent-go/pkg/mrtransport"
 )
 
 // ApplicationHostKey is the address where the
@@ -91,16 +91,16 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
 	config := loadSidecarConfig()
-	specs := tfmetric.GetInstrumentSpecs(config)
-	inputSpecs := specs[tfmetric.InputContext]
-	outputSpecs := specs[tfmetric.OutputContext]
+	specs := mrmetric.GetInstrumentSpecs(config)
+	inputSpecs := specs[mrmetric.InputContext]
+	outputSpecs := specs[mrmetric.OutputContext]
 
-	inputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	inputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range inputSpecs {
 		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
 
-	outputInstr := make(map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
+	outputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range outputSpecs {
 		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
 	}
