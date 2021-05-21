@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	configpb "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrotel"
-	"github.com/metricrule-sidecar-tfserving/pkg/mrrecorder"
-	"github.com/metricrule-sidecar-tfserving/pkg/tfmetric"
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
+	"github.com/metricrule-agent-go/pkg/mrmetric"
+	"github.com/metricrule-agent-go/pkg/mrotel"
+	"github.com/metricrule-agent-go/pkg/mrrecorder"
 )
 
 // MetricRecorder is an interface that is able to record a measurement with labels.
@@ -28,8 +28,8 @@ type MetricRecorder interface {
 type Transport struct {
 	http.RoundTripper
 	*configpb.SidecarConfig
-	InInstrs  map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
-	OutInstrs map[tfmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	InInstrs  map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
+	OutInstrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter     MetricRecorder
 }
 

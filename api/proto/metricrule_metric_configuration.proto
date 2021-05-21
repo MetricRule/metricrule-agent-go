@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package metricrule.sidecar.tfserving.api;
+package metricrule.agent.go.api;
 
-option go_package = "github.com/metricrule-sidecar-tfserving/api/proto/metricconfigpb";
+option go_package = "github.com/metricrule-agent-go/api/proto/metricconfigpb";
 
-message SidecarConfig {
+message SidecarConfig {    
     // Configuration for the data from the input tensor to record as metrics.
     // Each entry represents a separate metric.
     // Optional. If empty, no input data is recorded as metrics.
@@ -17,7 +17,25 @@ message SidecarConfig {
 
     // Configuration for labels parsed from the input data to be attached
     // to all metrics (input and output).
-    repeated LabelConfig context_labels_from_input = 3; 
+    repeated LabelConfig context_labels_from_input = 3;
+
+    // Configuration to filter received input payload before processing metrics.
+    // Optional. If empty, the full input payload is considered.
+    // This should be in JSONPath format https://goessner.net/articles/JsonPath/.
+    // All metric paths (e.g ParsedValue.field_path) will be evaluated relative 
+    // to the result of the filter.
+    // This can also be used to 'split' batch inputs. For example, for KFServing
+    // use ".instances[*]" for each instance to be evaluated independently.
+    string input_content_filter = 4;
+
+    // Configuration to filter received output payload before processing metrics.
+    // Optional. If empty, the full output payload is considered.
+    // This should be in JSONPath format https://goessner.net/articles/JsonPath/.
+    // All metric paths (e.g ParsedValue.field_path) will be evaluated relative 
+    // to the result of the filter.
+    // This can also be used to 'split' batch outputs. For example, for KFServing
+    // use ".predictions[*]" for each prediction to be evaluated independently.
+    string output_content_filter = 5;
 }
 
 // Configures a metric from either the input or output of the serving API.
@@ -75,13 +93,13 @@ message ValueConfig {
 message ParsedValue {
     // The path from the root message (e.g request or response) to
     // retrieve the value.
-    // For example,
-    //   "f.a"
-    // Refers to the field "a" nested in an object at field "f" in
-    // the top-level message.
-    // Numeric path indices can be used for repeated fields / arrays.
-    // For example,
-    //   "0.0"
+    // This should be in JSONPath format.
+    // https://goessner.net/articles/JsonPath/.
+    // e.g for json {f: {a: [1], b: 0}} to refer to 1, use `".f.a[0]"`
+    // or `"$.f.a[0]"`.
+    // Only a single JSON path expression should be provided.
+    // The path should point to a single JSON value (not an array or 
+    // object) matching the specified parsed_type.
     string field_path = 1;
 
     // The type to parse the value as.

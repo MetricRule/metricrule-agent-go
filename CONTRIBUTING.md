@@ -33,16 +33,16 @@ to run all unit tests.
 
 ### Verifying changes locally
 
-This [Docker Compose template](example/docker-compose/docker-compose.yml) runs
-the agent with a toy model and Prometheus-Grafana locally.
+This [Docker Compose template](example/tfserving/docker-compose/docker-compose.yml) runs
+the agent with TFServing, a toy model and Prometheus-Grafana locally.
 
 To use this for testing local modifications, build a Docker image locally with
 some tag.
 
 ```bash
-DOCKER_BUILDKIT=1 docker build . --target bin -t metricrule-tfserving-local-feature-xyz
+DOCKER_BUILDKIT=1 docker build . -f Dockerfile.tfserving --target bin -t metricrule-agent-local-feature-xyz
 ```
 
-Change the Docker Compose template's metricrule image to `metricrule-tfserving-local-feature-xyz`
+Change the Docker Compose template's metricrule image to `metricrule-agent-local-feature-xyz`
 
 Run with `docker-compose up`.
