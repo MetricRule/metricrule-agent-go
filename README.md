@@ -2,7 +2,7 @@
 
 Easy open source monitoring for ML models.
 
-> A sidecar agent that creates metrics for monitoring Tensorflow Serving models.
+> A sidecar agent that creates metrics for monitoring deployed machine learning models.
 
 [![Continuous Integration](https://github.com/MetricRule/metricrule-agent-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/MetricRule/metricrule-agent-go/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
