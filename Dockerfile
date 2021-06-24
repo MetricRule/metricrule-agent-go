@@ -17,9 +17,7 @@ COPY go.* .
 RUN go mod download
 COPY . .
 
-RUN protoc -I=api/proto --go_out=api/proto \
-      --go_opt=module=github.com/metricrule-agent-go/api/proto \
-      api/proto/metricrule_metric_configuration.proto
+RUN make -C api/ 
 
 FROM base AS build
 ARG TARGETOS
