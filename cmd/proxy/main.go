@@ -138,6 +138,8 @@ func initOtel() (metric.Meter, *prometheus.Exporter, mrotel.AggregatorProvider) 
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 	global.SetMeterProvider(exp.MeterProvider())
+	path := getEnv(MetricsPathKey, DefaultMetricsPath)
+	http.Handle(path, exp)
 	return global.Meter("metricrule.agent.proxy"), exp, agg
 }
 

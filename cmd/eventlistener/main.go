@@ -166,7 +166,7 @@ func main() {
 	}
 
 	meter, exporter, aggregator := initOtel()
-	config := getRecordConfig(meter, exporter, aggregator)
+	config := getRecordConfig(meter, aggregator)
 	ctxChans := make(map[string](chan []attribute.KeyValue))
 
 	agentPort := getEnv(AgentPortKey, AgentPortDefault)

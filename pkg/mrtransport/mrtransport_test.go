@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	"google.golang.org/protobuf/encoding/prototext"
 
 	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
@@ -48,6 +49,10 @@ func (f fakeInstrWrapper) Record(value interface{}) (metric.Measurement, error) 
 	}
 
 	return metric.Measurement{}, nil
+}
+
+func (f fakeInstrWrapper) Describe() metric.Descriptor {
+	return metric.NewDescriptor("Fake", metric.CounterInstrumentKind, number.Int64Kind)
 }
 
 func (f fakeMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurement ...metric.Measurement) {
