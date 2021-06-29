@@ -6,7 +6,12 @@ import (
 
 	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
+	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
 	"github.com/metricrule-agent-go/pkg/mrmetric"
 )
 
@@ -14,6 +19,8 @@ import (
 // It provides a single Record method.
 type InstrumentWrapper interface {
 	Record(value interface{}) (metric.Measurement, error)
+
+	Describe() metric.Descriptor
 }
 
 type int64CounterWrapper struct {
@@ -29,6 +36,10 @@ func (c int64CounterWrapper) Record(value interface{}) (metric.Measurement, erro
 	return c.c.Measurement(number), nil
 }
 
+func (c int64CounterWrapper) Describe() metric.Descriptor {
+	return c.c.SyncImpl().Descriptor()
+}
+
 type int64ValueRecorderWrapper struct {
 	c metric.Int64ValueRecorder
 }
@@ -40,6 +51,10 @@ func (c int64ValueRecorderWrapper) Record(value interface{}) (metric.Measurement
 		return c.c.Measurement(0), errors.New("Unexpected value")
 	}
 	return c.c.Measurement(number), nil
+}
+
+func (c int64ValueRecorderWrapper) Describe() metric.Descriptor {
+	return c.c.SyncImpl().Descriptor()
 }
 
 type float64ValueRecorderWrapper struct {
@@ -55,10 +70,18 @@ func (c float64ValueRecorderWrapper) Record(value interface{}) (metric.Measureme
 	return c.c.Measurement(number), nil
 }
 
+func (c float64ValueRecorderWrapper) Describe() metric.Descriptor {
+	return c.c.SyncImpl().Descriptor()
+}
+
 type noOpWrapper struct{}
 
 func (c noOpWrapper) Record(value interface{}) (metric.Measurement, error) {
 	return metric.Measurement{}, errors.New("No op wrapper used")
+}
+
+func (c noOpWrapper) Describe() metric.Descriptor {
+	return metric.NewDescriptor("No-op", metric.CounterInstrumentKind, number.Int64Kind)
 }
 
 // InitializeInstrument creates an instrument with the meter for the given spec.
@@ -91,4 +114,39 @@ func InitializeInstrument(meter metric.Meter, spec mrmetric.MetricInstrumentSpec
 	}
 	glog.Errorf("No instrument could be created for spec %v", spec.Name)
 	return noOpWrapper{}
+}
+
+type AggregatorProvider struct {
+	c map[*metric.Descriptor]mrmetric.AggregatorSpec
+}
+
+func (a AggregatorProvider) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	if spec, ok := a.c[descriptor]; ok {
+		if spec.HistogramBins != nil && len(spec.HistogramBins) > 0 {
+			aggs := histogram.New(len(aggPtrs), descriptor,
+				histogram.WithExplicitBoundaries(spec.HistogramBins))
+			for i := range aggPtrs {
+				*aggPtrs[i] = &aggs[i]
+			}
+			return
+		}
+	}
+	defaultAgg := simple.NewWithHistogramDistribution()
+	defaultAgg.AggregatorFor(descriptor, aggPtrs...)
+}
+
+func (a AggregatorProvider) Update(instrs map[mrmetric.MetricInstrumentSpec]InstrumentWrapper,
+	config *configpb.SidecarConfig) {
+	aggSpecs := mrmetric.GetAggregatorSpecs(config)
+	for spec, instr := range instrs {
+		if aggSpec, ok := aggSpecs[spec]; ok {
+			d := instr.Describe()
+			a.c[&d] = aggSpec
+		}
+	}
+}
+
+func NewAggregatorProvider() AggregatorProvider {
+	c := make(map[*metric.Descriptor]mrmetric.AggregatorSpec)
+	return AggregatorProvider{c}
 }

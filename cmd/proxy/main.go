@@ -13,6 +13,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"google.golang.org/protobuf/encoding/prototext"
 
 	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
@@ -84,7 +87,8 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 // Uses the provided meter for metrics.
 // The host should be provided as a string, without a protocol,  e.g "127.0.0.1".
 // The port should be provided as a string, without the ':', e.g "8080".
-func createReverseProxy(host string, port string, meter metric.Meter) *httputil.ReverseProxy {
+// Configures the provided aggregator.
+func createReverseProxy(host string, port string, meter metric.Meter, aggregator mrotel.AggregatorProvider) *httputil.ReverseProxy {
 	// parse the url
 	url, _ := url.Parse("http://" + host + ":" + port)
 
@@ -95,15 +99,20 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 	inputSpecs := specs[mrmetric.InputContext]
 	outputSpecs := specs[mrmetric.OutputContext]
 
+	allInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	inputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range inputSpecs {
 		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+		allInstr[spec] = inputInstr[spec]
 	}
 
 	outputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range outputSpecs {
 		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+		allInstr[spec] = outputInstr[spec]
 	}
+
+	aggregator.Update(allInstr, config)
 
 	proxy.Transport = &mrtransport.Transport{
 		RoundTripper:  http.DefaultTransport,
@@ -116,14 +125,20 @@ func createReverseProxy(host string, port string, meter metric.Meter) *httputil.
 	return proxy
 }
 
-func initOtel() (metric.Meter, *prometheus.Exporter) {
-	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+func initOtel() (metric.Meter, *prometheus.Exporter, mrotel.AggregatorProvider) {
+	agg := mrotel.NewAggregatorProvider()
+	ctlr := controller.New(
+		processor.New(
+			agg,
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
+		))
+	exp, err := prometheus.NewExporter(prometheus.Config{}, ctlr)
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	path := getEnv(MetricsPathKey, DefaultMetricsPath)
-	http.Handle(path, exporter)
-	return global.Meter("metricrule.sidecar.tfserving"), exporter
+	global.SetMeterProvider(exp.MeterProvider())
+	return global.Meter("metricrule.agent.proxy"), exp, agg
 }
 
 func serveReverseProxy(proxy *httputil.ReverseProxy, host string, port string, res http.ResponseWriter, req *http.Request) {
@@ -147,8 +162,8 @@ func main() {
 	proxyPort := getEnv(ReverseProxyPortKey, ReverseProxyPortDefault)
 	glog.Infof("Proxy server running on :%v will redirect to application on %v:%v", proxyPort, appHost, appPort)
 
-	meter, exporter := initOtel()
-	proxy := createReverseProxy(appHost, appPort, meter)
+	meter, exporter, aggregator := initOtel()
+	proxy := createReverseProxy(appHost, appPort, meter, aggregator)
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
 		serveReverseProxy(proxy, appHost, appPort, res, req)
 	})
