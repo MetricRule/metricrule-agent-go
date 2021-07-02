@@ -117,11 +117,11 @@ func InitializeInstrument(meter metric.Meter, spec mrmetric.MetricInstrumentSpec
 }
 
 type AggregatorProvider struct {
-	c map[*metric.Descriptor]mrmetric.AggregatorSpec
+	c map[metric.Descriptor]mrmetric.AggregatorSpec
 }
 
 func (a AggregatorProvider) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	if spec, ok := a.c[descriptor]; ok {
+	if spec, ok := a.c[*descriptor]; ok {
 		if spec.HistogramBins != nil && len(spec.HistogramBins) > 0 {
 			aggs := histogram.New(len(aggPtrs), descriptor,
 				histogram.WithExplicitBoundaries(spec.HistogramBins))
@@ -141,12 +141,12 @@ func (a AggregatorProvider) Update(instrs map[mrmetric.MetricInstrumentSpec]Inst
 	for spec, instr := range instrs {
 		if aggSpec, ok := aggSpecs[spec]; ok {
 			d := instr.Describe()
-			a.c[&d] = aggSpec
+			a.c[d] = aggSpec
 		}
 	}
 }
 
 func NewAggregatorProvider() AggregatorProvider {
-	c := make(map[*metric.Descriptor]mrmetric.AggregatorSpec)
+	c := make(map[metric.Descriptor]mrmetric.AggregatorSpec)
 	return AggregatorProvider{c}
 }
