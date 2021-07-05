@@ -18,8 +18,10 @@ import (
 // InstrumentWrapper wraps around various types of opentelemetry instruments.
 // It provides a single Record method.
 type InstrumentWrapper interface {
+	// Record returns either a single measurement object or an error.
 	Record(value interface{}) (metric.Measurement, error)
 
+	// Describe returns a descriptor object for the instrument.
 	Describe() metric.Descriptor
 }
 
@@ -65,7 +67,7 @@ func (c float64ValueRecorderWrapper) Record(value interface{}) (metric.Measureme
 	number, ok := value.(float64)
 	if !ok {
 		glog.Errorf("Unexpected value %v in float 64 value recorder", value)
-		return c.c.Measurement(0), errors.New("Unexpected value")
+		return c.c.Measurement(0), errors.New("unexpected value")
 	}
 	return c.c.Measurement(number), nil
 }
@@ -77,7 +79,7 @@ func (c float64ValueRecorderWrapper) Describe() metric.Descriptor {
 type noOpWrapper struct{}
 
 func (c noOpWrapper) Record(value interface{}) (metric.Measurement, error) {
-	return metric.Measurement{}, errors.New("No op wrapper used")
+	return metric.Measurement{}, errors.New("no op wrapper used")
 }
 
 func (c noOpWrapper) Describe() metric.Descriptor {
@@ -116,6 +118,7 @@ func InitializeInstrument(meter metric.Meter, spec mrmetric.MetricInstrumentSpec
 	return noOpWrapper{}
 }
 
+// AggregatorProvider returns an appropriate aggregator for given metric descriptor.
 type AggregatorProvider struct {
 	c map[metric.Descriptor]mrmetric.AggregatorSpec
 }
