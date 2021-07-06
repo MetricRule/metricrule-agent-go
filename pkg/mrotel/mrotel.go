@@ -142,7 +142,7 @@ func (a AggregatorProvider) AggregatorFor(descriptor *metric.Descriptor, aggPtrs
 
 // Update adds aggregator configurations in the provider for the given list of instruments.
 func (a AggregatorProvider) Update(instrs map[mrmetric.MetricInstrumentSpec]InstrumentWrapper,
-	config *configpb.SidecarConfig) {
+	config *configpb.AgentConfig) {
 	aggSpecs := mrmetric.GetAggregatorSpecs(config)
 	for spec, instr := range instrs {
 		if aggSpec, ok := aggSpecs[spec]; ok {

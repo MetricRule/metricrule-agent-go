@@ -53,19 +53,19 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func loadSidecarConfig() *configpb.SidecarConfig {
+func loadAgentConfig() *configpb.AgentConfig {
 	configPath := getEnv(ConfigPathKey, "")
 	if len(configPath) == 0 {
-		return &configpb.SidecarConfig{}
+		return &configpb.AgentConfig{}
 	}
 	contents, err := os.ReadFile(configPath)
 
 	if err != nil {
 		glog.Warningf("Error reading file at config path %v: %v", configPath, err)
-		return &configpb.SidecarConfig{}
+		return &configpb.AgentConfig{}
 	}
 
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	err = prototext.Unmarshal(contents, &config)
 	if err != nil {
 		glog.Warningf("Error unmarshaling textproto: %v", err)
@@ -90,13 +90,13 @@ func initOtel() (metric.Meter, *prometheus.Exporter, mrotel.AggregatorProvider) 
 }
 
 type recordConfig struct {
-	config    *configpb.SidecarConfig
+	config    *configpb.AgentConfig
 	inInstrs  map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	outInstrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 }
 
 func getRecordConfig(meter metric.Meter, aggregator mrotel.AggregatorProvider) recordConfig {
-	config := loadSidecarConfig()
+	config := loadAgentConfig()
 	specs := mrmetric.GetInstrumentSpecs(config)
 	inputSpecs := specs[mrmetric.InputContext]
 	outputSpecs := specs[mrmetric.OutputContext]

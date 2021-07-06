@@ -25,7 +25,7 @@ type MetricRecorder interface {
 // for logging.
 type RequestLogData struct {
 	Dump   []byte
-	Config *configpb.SidecarConfig
+	Config *configpb.AgentConfig
 	Instrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter  MetricRecorder
 }
@@ -63,7 +63,7 @@ func LogRequestData(d RequestLogData, ctxChan chan<- []attribute.KeyValue) {
 // for logging.
 type ResponseLogData struct {
 	Dump   []byte
-	Config *configpb.SidecarConfig
+	Config *configpb.AgentConfig
 	Instrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter  MetricRecorder
 }

@@ -27,7 +27,7 @@ type MetricRecorder interface {
 // meter (or an equivalent recorder).
 type Transport struct {
 	http.RoundTripper
-	*configpb.SidecarConfig
+	*configpb.AgentConfig
 	InInstrs  map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	OutInstrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 	Meter     MetricRecorder
@@ -47,7 +47,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		reqdata := mrrecorder.RequestLogData{
 			Dump:   dump,
-			Config: t.SidecarConfig,
+			Config: t.AgentConfig,
 			Instrs: t.InInstrs,
 			Meter:  t.Meter,
 		}
@@ -69,7 +69,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		resdata := mrrecorder.ResponseLogData{
 			Dump:   dump,
-			Config: t.SidecarConfig,
+			Config: t.AgentConfig,
 			Instrs: t.OutInstrs,
 			Meter:  t.Meter,
 		}

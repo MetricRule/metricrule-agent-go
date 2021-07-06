@@ -110,7 +110,7 @@ func TestRecordCounterNoLabels(t *testing.T) {
 			name: "simple"
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	fakeCounter.expectedCalls = []instrumentRecordCall{{int64(1)}}
@@ -119,7 +119,7 @@ func TestRecordCounterNoLabels(t *testing.T) {
 
 	transport := Transport{
 		RoundTripper:  stubTransport,
-		SidecarConfig: &config,
+		AgentConfig: &config,
 		InInstrs:      map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{spec: fakeCounter},
 		OutInstrs:     map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{},
 		Meter:         fakeMeter,
@@ -176,7 +176,7 @@ func TestRecordContextLabelsAppliedForInputAndOutput(t *testing.T) {
 			}
 		}
 		`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	// Input counter
@@ -193,7 +193,7 @@ func TestRecordContextLabelsAppliedForInputAndOutput(t *testing.T) {
 
 	transport := Transport{
 		RoundTripper:  stubTransport,
-		SidecarConfig: &config,
+		AgentConfig: &config,
 		InInstrs:      map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{inputSpec: fakeCounter},
 		OutInstrs:     map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper{outputSpec: fakeRecorder},
 		Meter:         fakeMeter,

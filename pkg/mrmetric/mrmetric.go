@@ -67,7 +67,7 @@ const (
 
 // GetInstrumentSpecs returns the specifications of metric instruments to create
 // for recording metrics, per each input context, for the provided config.
-func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]MetricInstrumentSpec {
+func GetInstrumentSpecs(config *configpb.AgentConfig) map[MetricContext][]MetricInstrumentSpec {
 	specs := make(map[MetricContext][]MetricInstrumentSpec)
 
 	if len(config.InputMetrics) > 0 {
@@ -89,7 +89,7 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 
 // GetAggregatorSpecs returns the specifications of metric aggregators to use
 // with each instrument.
-func GetAggregatorSpecs(config *configpb.SidecarConfig) map[MetricInstrumentSpec]AggregatorSpec {
+func GetAggregatorSpecs(config *configpb.AgentConfig) map[MetricInstrumentSpec]AggregatorSpec {
 	specs := make(map[MetricInstrumentSpec]AggregatorSpec)
 	for _, c := range config.InputMetrics {
 		specs[getInstrumentSpec(c)] = AggregatorSpec{getMetricBins(c)}
@@ -101,7 +101,7 @@ func GetAggregatorSpecs(config *configpb.SidecarConfig) map[MetricInstrumentSpec
 }
 
 // GetMetricInstances returns a map of metric specifications to the instances to record.
-func GetMetricInstances(config *configpb.SidecarConfig,
+func GetMetricInstances(config *configpb.AgentConfig,
 	payload string,
 	context MetricContext) map[MetricInstrumentSpec][]MetricInstance {
 
@@ -147,7 +147,7 @@ func GetMetricInstances(config *configpb.SidecarConfig,
 
 // GetContextLabels returns a list of labels extracted for the supplied context.
 // This is currently only supported for InputContext.
-func GetContextLabels(config *configpb.SidecarConfig, payload string, context MetricContext) []attribute.KeyValue {
+func GetContextLabels(config *configpb.AgentConfig, payload string, context MetricContext) []attribute.KeyValue {
 	configs := []*configpb.LabelConfig{}
 	filter := ""
 	if context == InputContext {

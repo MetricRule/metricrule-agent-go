@@ -1,5 +1,5 @@
 # proto-file: api/proto/metricrule_metric_configuration.proto
-# proto-message: SidecarConfig
+# proto-message: AgentConfig
 
 input_content_filter: ".instances[*]"
 input_metrics {

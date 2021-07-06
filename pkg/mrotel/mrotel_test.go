@@ -166,7 +166,7 @@ func TestUpdateProvider(t *testing.T) {
 				bins: 1.0,
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	spec := mrmetric.MetricInstrumentSpec{

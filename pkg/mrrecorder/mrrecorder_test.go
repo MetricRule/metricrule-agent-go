@@ -83,7 +83,7 @@ func TestRecordInputCounterNoLabels(t *testing.T) {
 			name: "simple"
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	fakeCounter.expectedCalls = []instrumentRecordCall{{int64(1)}}
@@ -121,7 +121,7 @@ func TestOutputRecorderNoLabels(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	fakeRecorder.expectedCalls = []instrumentRecordCall{{float64(1)}}

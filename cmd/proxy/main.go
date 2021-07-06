@@ -64,18 +64,18 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func loadSidecarConfig() *configpb.SidecarConfig {
+func loadAgentConfig() *configpb.AgentConfig {
 	configPath := getEnv(ConfigPathKey, "")
 	if len(configPath) == 0 {
-		return &configpb.SidecarConfig{}
+		return &configpb.AgentConfig{}
 	}
 	contents, err := os.ReadFile(configPath)
 	if err != nil {
 		glog.Warningf("Error reading file at config path %v: %v", configPath, err)
-		return &configpb.SidecarConfig{}
+		return &configpb.AgentConfig{}
 	}
 
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	err = prototext.Unmarshal(contents, &config)
 	if err != nil {
 		glog.Warningf("Error unmarshaling textproto: %v", err)
@@ -94,7 +94,7 @@ func createReverseProxy(host string, port string, meter metric.Meter, aggregator
 
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
-	config := loadSidecarConfig()
+	config := loadAgentConfig()
 	specs := mrmetric.GetInstrumentSpecs(config)
 	inputSpecs := specs[mrmetric.InputContext]
 	outputSpecs := specs[mrmetric.OutputContext]
@@ -116,7 +116,7 @@ func createReverseProxy(host string, port string, meter metric.Meter, aggregator
 
 	proxy.Transport = &mrtransport.Transport{
 		RoundTripper:  http.DefaultTransport,
-		SidecarConfig: config,
+		AgentConfig: config,
 		InInstrs:      inputInstr,
 		OutInstrs:     outputInstr,
 		Meter:         meter,

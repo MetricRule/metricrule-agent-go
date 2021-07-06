@@ -16,7 +16,7 @@ func TestInputCounterInstrumentSpec(t *testing.T) {
 			name: "simple"
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	specs := GetInstrumentSpecs(&config)
@@ -57,7 +57,7 @@ func TestInputCounterMetrics(t *testing.T) {
 		input_metrics {
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{}", InputContext)
@@ -120,7 +120,7 @@ func TestInputCounterWithLabels(t *testing.T) {
 				label_value: { string_value: "MetricRule" }
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{}", InputContext)
@@ -200,7 +200,7 @@ func TestOutputValuesMetrics(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"prediction\": 0.495 }", OutputContext)
@@ -266,7 +266,7 @@ func TestOutputNestedValuesMetrics(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"prediction\": [[0.495]] }", OutputContext)
@@ -344,7 +344,7 @@ func TestMultipleInputsNestedMetrics(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	response := `{
@@ -458,7 +458,7 @@ func TestGetInputContextLabels(t *testing.T) {
 			}
 		}
 		`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	response := `{
@@ -515,7 +515,7 @@ func TestGetMultipleLabelsWithWildcard(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	request := `{
@@ -638,7 +638,7 @@ func TestMultipleMetricsWithFilter(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	response := `{
@@ -769,7 +769,7 @@ func TestGetInputContextLabelsWithFilter(t *testing.T) {
 			}
 		}
 		`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	request := `{
@@ -833,7 +833,7 @@ func TestOutputValueWithFilterMetrics(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{ \"predictions\": [[0.495]] }", OutputContext)
@@ -893,7 +893,7 @@ func TestInputCounterMultipleFilterMetrics(t *testing.T) {
 		input_metrics {
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	metrics := GetMetricInstances(&config, "{\"instances\": [{}, {}]}", InputContext)
@@ -965,7 +965,7 @@ func TestGetAggregatorSpecHistogramBin(t *testing.T) {
 				bins: 1.0,
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	specs := GetAggregatorSpecs(&config)
@@ -1003,7 +1003,7 @@ func TestGetAggregatorSpecValueNoHistogramBin(t *testing.T) {
 			name: "simple"
 			simple_counter: {}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	specs := GetAggregatorSpecs(&config)
@@ -1046,7 +1046,7 @@ func TestGetAggregatorSpecCounter(t *testing.T) {
 				}
 			}
 		}`
-	var config configpb.SidecarConfig
+	var config configpb.AgentConfig
 	_ = prototext.Unmarshal([]byte(configTextProto), &config)
 
 	specs := GetAggregatorSpecs(&config)
