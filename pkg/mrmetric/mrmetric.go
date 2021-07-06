@@ -27,8 +27,17 @@ type MetricInstrumentSpec struct {
 	InstrumentKind metric.InstrumentKind
 	// The type of value to be measured in the metric.
 	MetricValueKind reflect.Kind
-	// Identifying name of this metric
+	// Identifying name of this metric.
 	Name string
+}
+
+// AggregatorSpec specifies an aggregation mode to use when recording
+// the metric.
+type AggregatorSpec struct {
+	// Specifies the boundaries to use when recording as a histogram.
+	// This is only relevant for value recorder type instruments.
+	// If absent, a default will be used.
+	HistogramBins []float64
 }
 
 // A MetricInstance is a single instance of a metric to be recorded.
@@ -75,6 +84,19 @@ func GetInstrumentSpecs(config *configpb.SidecarConfig) map[MetricContext][]Metr
 		}
 	}
 
+	return specs
+}
+
+// GetAggregatorSpecs returns the specifications of metric aggregators to use
+// with each instrument.
+func GetAggregatorSpecs(config *configpb.SidecarConfig) map[MetricInstrumentSpec]AggregatorSpec {
+	specs := make(map[MetricInstrumentSpec]AggregatorSpec)
+	for _, c := range config.InputMetrics {
+		specs[getInstrumentSpec(c)] = AggregatorSpec{getMetricBins(c)}
+	}
+	for _, c := range config.OutputMetrics {
+		specs[getInstrumentSpec(c)] = AggregatorSpec{getMetricBins(c)}
+	}
 	return specs
 }
 
@@ -273,6 +295,19 @@ func getValueMetricKind(config *configpb.ValueConfig) reflect.Kind {
 	}
 
 	return reflect.Invalid
+}
+
+func getMetricBins(config *configpb.MetricConfig) []float64 {
+	if config.GetValue() != nil {
+		bins := []float64{}
+		for _, bin := range config.GetValue().GetBins() {
+			bins = append(bins, float64(bin))
+		}
+		if len(bins) > 0 {
+			return bins
+		}
+	}
+	return nil
 }
 
 func getFilteredValues(filter string, jsonPayload interface{}) []interface{} {

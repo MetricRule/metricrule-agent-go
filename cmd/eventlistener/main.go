@@ -7,14 +7,17 @@ import (
 	"net/http"
 	"os"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	configpb "github.com/metricrule-agent-go/api/proto/metricconfigpb"
 	"github.com/metricrule-agent-go/pkg/mrmetric"
 	"github.com/metricrule-agent-go/pkg/mrotel"
@@ -70,12 +73,20 @@ func loadSidecarConfig() *configpb.SidecarConfig {
 	return &config
 }
 
-func initOtel() (metric.Meter, *prometheus.Exporter) {
-	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+func initOtel() (metric.Meter, *prometheus.Exporter, mrotel.AggregatorProvider) {
+	agg := mrotel.NewAggregatorProvider()
+	ctlr := controller.New(
+		processor.New(
+			agg,
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
+		))
+	exp, err := prometheus.NewExporter(prometheus.Config{}, ctlr)
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	return global.Meter("metricrule.sidecar.tfserving"), exporter
+	global.SetMeterProvider(exp.MeterProvider())
+	return global.Meter("metricrule.agent.eventlistener"), exp, agg
 }
 
 type recordConfig struct {
@@ -84,21 +95,26 @@ type recordConfig struct {
 	outInstrs map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper
 }
 
-func getRecordConfig(meter metric.Meter) recordConfig {
+func getRecordConfig(meter metric.Meter, aggregator mrotel.AggregatorProvider) recordConfig {
 	config := loadSidecarConfig()
 	specs := mrmetric.GetInstrumentSpecs(config)
 	inputSpecs := specs[mrmetric.InputContext]
 	outputSpecs := specs[mrmetric.OutputContext]
 
+	allInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	inputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range inputSpecs {
 		inputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+		allInstr[spec] = inputInstr[spec]
 	}
 
 	outputInstr := make(map[mrmetric.MetricInstrumentSpec]mrotel.InstrumentWrapper)
 	for _, spec := range outputSpecs {
 		outputInstr[spec] = mrotel.InitializeInstrument(meter, spec)
+		allInstr[spec] = outputInstr[spec]
 	}
+
+	aggregator.Update(allInstr, config)
 
 	return recordConfig{config, inputInstr, outputInstr}
 }
@@ -149,8 +165,8 @@ func main() {
 		log.Fatal("Failed to create client, ", err)
 	}
 
-	meter, exporter := initOtel()
-	config := getRecordConfig(meter)
+	meter, exporter, aggregator := initOtel()
+	config := getRecordConfig(meter, aggregator)
 	ctxChans := make(map[string](chan []attribute.KeyValue))
 
 	agentPort := getEnv(AgentPortKey, AgentPortDefault)

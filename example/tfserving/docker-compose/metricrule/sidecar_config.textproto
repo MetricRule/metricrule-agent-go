@@ -25,6 +25,11 @@ output_metrics {
                 parsed_type: FLOAT
             }
         }
+        bins: -10
+        bins: -3
+        bins: 0
+        bins: 3
+        bins: 10
     }
 }
 context_labels_from_input {
