@@ -123,6 +123,8 @@ type AggregatorProvider struct {
 	c map[metric.Descriptor]mrmetric.AggregatorSpec
 }
 
+// AggregatorFor sets the provided pointer/s to aggregators initialized for the given
+// descriptor.
 func (a AggregatorProvider) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	if spec, ok := a.c[*descriptor]; ok {
 		if spec.HistogramBins != nil && len(spec.HistogramBins) > 0 {
@@ -138,6 +140,7 @@ func (a AggregatorProvider) AggregatorFor(descriptor *metric.Descriptor, aggPtrs
 	defaultAgg.AggregatorFor(descriptor, aggPtrs...)
 }
 
+// Update adds aggregator configurations in the provider for the given list of instruments.
 func (a AggregatorProvider) Update(instrs map[mrmetric.MetricInstrumentSpec]InstrumentWrapper,
 	config *configpb.SidecarConfig) {
 	aggSpecs := mrmetric.GetAggregatorSpecs(config)
@@ -149,6 +152,7 @@ func (a AggregatorProvider) Update(instrs map[mrmetric.MetricInstrumentSpec]Inst
 	}
 }
 
+// NewAggregatorProvider returns a new empty instance of AggregatorProvider.
 func NewAggregatorProvider() AggregatorProvider {
 	c := make(map[metric.Descriptor]mrmetric.AggregatorSpec)
 	return AggregatorProvider{c}
