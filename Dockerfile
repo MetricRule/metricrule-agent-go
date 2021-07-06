@@ -17,8 +17,7 @@ COPY go.* .
 RUN go mod download
 COPY . .
 
-RUN make -C api/
-RUN go mod vendor
+RUN make -C api/ 
 
 FROM base AS build
 ARG TARGETOS
